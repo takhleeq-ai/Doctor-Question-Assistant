@@ -69,7 +69,7 @@ export default function QuestionsGenerator() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       condition: "",
-      symptoms: "",
+      symptoms: "N/A",
       medications: "",
       appointmentId: "",
     },
@@ -88,7 +88,8 @@ export default function QuestionsGenerator() {
         } else if (response.status === 429) {
           throw new Error("Too many requests. Please wait a moment and try again");
         } else {
-          throw new Error("Unable to generate questions. Please try again later");
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.details || errorData.error || "Unable to generate questions. Please try again later");
         }
       }
       return await response.json() as GeneratedQuestions;

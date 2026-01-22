@@ -644,7 +644,13 @@ Generate comprehensive but focused questions I should ask my doctor, organized b
       res.json(generatedData);
     } catch (error) {
       console.error("Error generating questions:", error);
-      res.status(500).json({ error: "Failed to generate questions" });
+      if (error instanceof Error) {
+        console.error("Stack trace:", error.stack);
+        if ((error as any).response) {
+          console.error("OpenAI Response Error:", (error as any).response.data);
+        }
+      }
+      res.status(500).json({ error: "Failed to generate questions", details: error instanceof Error ? error.message : String(error) });
     }
   });
 
