@@ -9,9 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { usePatientProfile } from "@/hooks/use-patient-profile";
 import { useAuth } from "@/hooks/use-auth";
-import { Download, Mail, FileText, Activity, Thermometer, Calendar, Loader2, Sparkles, Stethoscope } from "lucide-react";
+import { Download, Mail, FileText, Activity, Thermometer, Calendar, Loader2, Sparkles, Stethoscope, HelpCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import type { Appointment, Symptom, Reading, PatientProfile } from "@shared/schema";
+import type { Appointment, Symptom, Reading, PatientProfile, QuestionSet } from "@shared/schema";
 
 function formatDate(date: Date | string | null): string {
   if (!date) return "Not specified";
@@ -26,7 +26,8 @@ function generateHealthReport(
   profile: PatientProfile | null,
   appointments: Appointment[],
   symptoms: Symptom[],
-  readings: Reading[]
+  readings: Reading[],
+  questionSets: QuestionSet[]
 ): string {
   const lines: string[] = [];
   const now = new Date();
@@ -51,6 +52,51 @@ function generateHealthReport(
     if (profile.medications) lines.push(`Medications: ${profile.medications}`);
     if (profile.emergencyContact) lines.push(`Emergency Contact: ${profile.emergencyContact} (${profile.emergencyPhone || "No phone"})`);
     lines.push("");
+  }
+
+  if (questionSets.length > 0) {
+    lines.push("-".repeat(40));
+    lines.push("QUESTIONS FOR YOUR DOCTOR");
+    lines.push("-".repeat(40));
+    
+    questionSets.forEach((qs, setIndex) => {
+      if (questionSets.length > 1) {
+        lines.push(`\n>>> Visit ${setIndex + 1} <<<`);
+      }
+      
+      lines.push(`Reason for Visit: ${qs.condition}`);
+      if (qs.symptoms) lines.push(`Symptoms: ${qs.symptoms}`);
+      if (qs.medications) lines.push(`Current Medications: ${qs.medications}`);
+      lines.push("");
+      
+      lines.push("Questions to Ask:");
+      const questions = qs.generatedQuestions.split("\n").filter(q => q.trim());
+      let questionNum = 1;
+      questions.forEach((question) => {
+        const trimmed = question.trim();
+        if (trimmed) {
+          const cleanQuestion = trimmed.replace(/^[-*•]\s*/, "").replace(/^\d+\.\s*/, "");
+          if (cleanQuestion) {
+            lines.push(`  ${questionNum}. ${cleanQuestion}`);
+            questionNum++;
+          }
+        }
+      });
+      
+      if (qs.redFlags) {
+        lines.push("");
+        lines.push("Important Warning Signs (Red Flags):");
+        const flags = qs.redFlags.split("\n").filter(f => f.trim());
+        flags.forEach((flag, i) => {
+          const cleanFlag = flag.trim().replace(/^[-*•]\s*/, "").replace(/^\d+\.\s*/, "");
+          if (cleanFlag) {
+            lines.push(`  ! ${cleanFlag}`);
+          }
+        });
+      }
+      
+      lines.push("");
+    });
   }
 
   if (appointments.length > 0) {
@@ -109,10 +155,15 @@ export default function ExportData() {
   const { selectedProfile, isChildMode } = usePatientProfile();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
+  const [includeQuestions, setIncludeQuestions] = useState(true);
   const [includeAppointments, setIncludeAppointments] = useState(true);
   const [includeSymptoms, setIncludeSymptoms] = useState(true);
   const [includeReadings, setIncludeReadings] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+
+  const { data: questionSets = [] } = useQuery<QuestionSet[]>({
+    queryKey: ["/api/questions"],
+  });
 
   const { data: appointments = [] } = useQuery<Appointment[]>({
     queryKey: ["/api/appointments"],
@@ -163,6 +214,7 @@ export default function ExportData() {
   const handleDownload = () => {
     setIsExporting(true);
     try {
+      const filteredQuestions = includeQuestions ? questionSets : [];
       const filteredAppointments = includeAppointments ? appointments : [];
       const filteredSymptoms = includeSymptoms ? symptoms : [];
       const filteredReadings = includeReadings ? readings : [];
@@ -171,7 +223,8 @@ export default function ExportData() {
         selectedProfile,
         filteredAppointments,
         filteredSymptoms,
-        filteredReadings
+        filteredReadings,
+        filteredQuestions
       );
 
       const blob = new Blob([report], { type: "text/plain" });
@@ -209,6 +262,7 @@ export default function ExportData() {
       return;
     }
 
+    const filteredQuestions = includeQuestions ? questionSets : [];
     const filteredAppointments = includeAppointments ? appointments : [];
     const filteredSymptoms = includeSymptoms ? symptoms : [];
     const filteredReadings = includeReadings ? readings : [];
@@ -217,7 +271,8 @@ export default function ExportData() {
       selectedProfile,
       filteredAppointments,
       filteredSymptoms,
-      filteredReadings
+      filteredReadings,
+      filteredQuestions
     );
 
     emailMutation.mutate({ email, report });
@@ -259,6 +314,20 @@ export default function ExportData() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3">
+              <div className="flex items-center space-x-3">
+                <Checkbox 
+                  id="questions" 
+                  checked={includeQuestions}
+                  onCheckedChange={(checked) => setIncludeQuestions(checked as boolean)}
+                  data-testid="checkbox-questions"
+                />
+                <Label htmlFor="questions" className="flex items-center gap-2 cursor-pointer">
+                  <HelpCircle className="h-4 w-4 text-purple-500" />
+                  {isChildMode ? "Questions for the Doctor" : "Questions for Doctor"} 
+                  <Badge variant="outline">{questionSets.length}</Badge>
+                </Label>
+              </div>
+
               <div className="flex items-center space-x-3">
                 <Checkbox 
                   id="appointments" 
