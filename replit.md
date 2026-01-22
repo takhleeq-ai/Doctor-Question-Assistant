@@ -67,12 +67,21 @@ shared/
 - Dark mode support
 - Accessible components using Shadcn UI
 
-## Security Notes
-- Patient profile API uses a custom input schema (`patientProfileInputSchema`) that:
+## Security Notes (Zero Trust Architecture)
+- **Authentication**: All health data routes protected with `isAuthenticated` middleware (appointments, symptoms, readings, reminders, questions, patient profiles, providers)
+- **Security Headers**: Helmet middleware for CSP, XSS protection, clickjacking prevention
+- **Rate Limiting**: 100 requests/15min for API, 20 requests/15min for auth endpoints, 1MB body size limit
+- **Input Validation**:
+  - `validateIdParam` middleware validates numeric IDs on all /:id routes
+  - Max length constraints on all schema fields
+  - Coordinate range validation (-90 to 90 lat, -180 to 180 lon) for nearby services
+  - Service type whitelisting for nearby endpoint
+  - Email validation using validator library
+- **Error Handling**: Generic error messages returned to clients; detailed errors logged server-side only
+- **Patient Profile Security**:
   - Strips `userId` from client input (injected server-side from auth)
   - Strips `isDefault` from create/update (only changeable via set-default endpoint)
   - Coerces date strings to Date objects for proper validation
-- All patient profile and healthcare provider routes are protected with `isAuthenticated` middleware
 
 ## Recent Changes
 - January 22, 2026: Added export/share and child-friendly UI features
