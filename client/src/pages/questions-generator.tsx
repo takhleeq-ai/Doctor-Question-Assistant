@@ -42,7 +42,7 @@ import type { Appointment } from "@shared/schema";
 
 const formSchema = z.object({
   condition: z.string().min(2, "Please describe your condition or reason for visit"),
-  symptoms: z.string().min(2, "Please describe your symptoms"),
+  symptoms: z.string().optional(),
   medications: z.string().optional(),
   appointmentId: z.string().optional(),
 });
@@ -112,7 +112,10 @@ export default function QuestionsGenerator() {
     let content = "QUESTIONS FOR MY DOCTOR\n";
     content += "========================\n\n";
     content += `Condition: ${form.getValues("condition")}\n`;
-    content += `Symptoms: ${form.getValues("symptoms")}\n`;
+    const symptomsValue = form.getValues("symptoms");
+    if (symptomsValue) {
+      content += `Symptoms: ${symptomsValue}\n`;
+    }
     if (form.getValues("medications")) {
       content += `Medications: ${form.getValues("medications")}\n`;
     }

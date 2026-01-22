@@ -10,6 +10,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { PatientProfileProvider } from "@/hooks/use-patient-profile";
 import { PatientProfileSelector } from "@/components/patient-profile-selector";
 import { OfflineIndicator } from "@/components/offline-indicator";
+import { UpdateNotification } from "@/components/update-notification";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import NotFound from "@/pages/not-found";
@@ -96,6 +97,7 @@ function App() {
         <TooltipProvider>
           <AppContent />
           <Toaster />
+          <UpdateNotification />
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>
