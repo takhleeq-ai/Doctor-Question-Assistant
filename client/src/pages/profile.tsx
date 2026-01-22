@@ -15,6 +15,13 @@ import {
   MapPin,
   Building2,
   Save,
+  Users,
+  Baby,
+  Heart,
+  Star,
+  Calendar,
+  AlertTriangle,
+  Pill,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,7 +68,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { HealthcareProvider } from "@shared/schema";
+import type { HealthcareProvider, PatientProfile } from "@shared/schema";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const providerTypes = [
   { value: "gp", label: "General Practitioner (GP)" },
@@ -73,6 +81,51 @@ const providerTypes = [
   { value: "pharmacist", label: "Pharmacist" },
   { value: "other", label: "Other" },
 ];
+
+const relationshipTypes = [
+  { value: "self", label: "Myself" },
+  { value: "child", label: "Child" },
+  { value: "spouse", label: "Spouse/Partner" },
+  { value: "parent", label: "Parent" },
+  { value: "sibling", label: "Sibling" },
+  { value: "other", label: "Other" },
+];
+
+const genderOptions = [
+  { value: "male", label: "Male" },
+  { value: "female", label: "Female" },
+  { value: "other", label: "Other" },
+  { value: "prefer_not_to_say", label: "Prefer not to say" },
+];
+
+const bloodTypeOptions = [
+  { value: "A+", label: "A+" },
+  { value: "A-", label: "A-" },
+  { value: "B+", label: "B+" },
+  { value: "B-", label: "B-" },
+  { value: "AB+", label: "AB+" },
+  { value: "AB-", label: "AB-" },
+  { value: "O+", label: "O+" },
+  { value: "O-", label: "O-" },
+  { value: "unknown", label: "Unknown" },
+];
+
+const patientProfileSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  relationship: z.string().min(1, "Relationship is required"),
+  dateOfBirth: z.string().optional(),
+  gender: z.string().optional(),
+  bloodType: z.string().optional(),
+  allergies: z.string().optional(),
+  conditions: z.string().optional(),
+  medications: z.string().optional(),
+  emergencyContact: z.string().optional(),
+  emergencyPhone: z.string().optional(),
+  notes: z.string().optional(),
+  isDefault: z.boolean().optional(),
+});
+
+type PatientProfileFormData = z.infer<typeof patientProfileSchema>;
 
 const formSchema = z.object({
   type: z.string().min(1, "Select a provider type"),
@@ -89,6 +142,428 @@ type FormData = z.infer<typeof formSchema>;
 
 function getProviderTypeLabel(type: string): string {
   return providerTypes.find(t => t.value === type)?.label || type;
+}
+
+function getRelationshipLabel(relationship: string): string {
+  return relationshipTypes.find(r => r.value === relationship)?.label || relationship;
+}
+
+function getRelationshipIcon(relationship: string) {
+  switch (relationship) {
+    case "self": return User;
+    case "child": return Baby;
+    case "spouse": return Heart;
+    case "parent": return Users;
+    default: return User;
+  }
+}
+
+function PatientProfileCard({
+  profile,
+  onDelete,
+  onEdit,
+  onSetDefault,
+}: {
+  profile: PatientProfile;
+  onDelete: (id: number) => void;
+  onEdit: (profile: PatientProfile) => void;
+  onSetDefault: (id: number) => void;
+}) {
+  const Icon = getRelationshipIcon(profile.relationship);
+  
+  return (
+    <Card className={profile.isDefault ? "border-primary" : ""}>
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
+            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${profile.isDefault ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"}`}>
+              <Icon className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1 space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-medium">{profile.name}</h3>
+                <Badge variant="outline">{getRelationshipLabel(profile.relationship)}</Badge>
+                {profile.isDefault && (
+                  <Badge variant="default" className="gap-1">
+                    <Star className="h-3 w-3" />
+                    Default
+                  </Badge>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mt-2">
+                {profile.dateOfBirth && (
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    {new Date(profile.dateOfBirth).toLocaleDateString()}
+                  </span>
+                )}
+                {profile.bloodType && profile.bloodType !== "unknown" && (
+                  <span className="flex items-center gap-1">
+                    Blood: {profile.bloodType}
+                  </span>
+                )}
+              </div>
+
+              {profile.allergies && (
+                <p className="text-sm text-destructive flex items-start gap-1 mt-1">
+                  <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                  Allergies: {profile.allergies}
+                </p>
+              )}
+
+              {profile.conditions && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Conditions: {profile.conditions}
+                </p>
+              )}
+
+              {profile.medications && (
+                <p className="text-sm text-muted-foreground flex items-start gap-1 mt-1">
+                  <Pill className="h-3 w-3 mt-0.5 shrink-0" />
+                  {profile.medications}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex gap-1">
+            {!profile.isDefault && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onSetDefault(profile.id)}
+                title="Set as default"
+                data-testid={`button-set-default-profile-${profile.id}`}
+              >
+                <Star className="h-4 w-4" />
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onEdit(profile)}
+              data-testid={`button-edit-profile-${profile.id}`}
+            >
+              <Edit2 className="h-4 w-4" />
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  data-testid={`button-delete-profile-${profile.id}`}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Patient Profile</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to remove {profile.name} from your profiles? This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => onDelete(profile.id)}>
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PatientProfileForm({
+  onSubmit,
+  onCancel,
+  isPending,
+  defaultValues,
+  isEditing,
+}: {
+  onSubmit: (data: PatientProfileFormData) => void;
+  onCancel: () => void;
+  isPending: boolean;
+  defaultValues?: Partial<PatientProfileFormData>;
+  isEditing?: boolean;
+}) {
+  const form = useForm<PatientProfileFormData>({
+    resolver: zodResolver(patientProfileSchema),
+    defaultValues: {
+      name: "",
+      relationship: "",
+      dateOfBirth: "",
+      gender: "",
+      bloodType: "",
+      allergies: "",
+      conditions: "",
+      medications: "",
+      emergencyContact: "",
+      emergencyPhone: "",
+      notes: "",
+      isDefault: false,
+      ...defaultValues,
+    },
+  });
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Name</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Full name"
+                    data-testid="input-profile-name"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="relationship"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Relationship</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger data-testid="select-relationship">
+                      <SelectValue placeholder="Select relationship" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {relationshipTypes.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="dateOfBirth"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Date of Birth (Optional)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="date"
+                    data-testid="input-profile-dob"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="gender"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Gender (Optional)</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger data-testid="select-gender">
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {genderOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="bloodType"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Blood Type (Optional)</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger data-testid="select-blood-type">
+                    <SelectValue placeholder="Select blood type" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {bloodTypeOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="allergies"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Known Allergies (Optional)</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="e.g., Penicillin, Peanuts, Latex"
+                  className="resize-none"
+                  data-testid="input-profile-allergies"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="conditions"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Medical Conditions (Optional)</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="e.g., Diabetes Type 2, Hypertension"
+                  className="resize-none"
+                  data-testid="input-profile-conditions"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="medications"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Current Medications (Optional)</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="e.g., Metformin 500mg, Lisinopril 10mg"
+                  className="resize-none"
+                  data-testid="input-profile-medications"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="emergencyContact"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Emergency Contact (Optional)</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Contact name"
+                    data-testid="input-profile-emergency-contact"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="emergencyPhone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Emergency Phone (Optional)</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="(555) 123-4567"
+                    data-testid="input-profile-emergency-phone"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="notes"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Notes (Optional)</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Any additional health information"
+                  className="resize-none"
+                  data-testid="input-profile-notes"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isPending} data-testid="button-save-profile">
+            {isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {isEditing ? "Saving..." : "Adding..."}
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                {isEditing ? "Save Changes" : "Add Profile"}
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </form>
+    </Form>
+  );
 }
 
 function ProviderCard({ 
@@ -409,26 +884,36 @@ function ProviderForm({
 
 export default function Profile() {
   const { user, isLoading: authLoading, logout } = useAuth();
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [providerDialogOpen, setProviderDialogOpen] = useState(false);
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [editingProvider, setEditingProvider] = useState<HealthcareProvider | null>(null);
+  const [editingProfile, setEditingProfile] = useState<PatientProfile | null>(null);
 
+  // Providers queries
   const { data: providers, isLoading: providersLoading } = useQuery<HealthcareProvider[]>({
     queryKey: ["/api/providers"],
     enabled: !!user,
   });
 
-  const createMutation = useMutation({
+  // Patient profiles queries
+  const { data: patientProfiles, isLoading: profilesLoading } = useQuery<PatientProfile[]>({
+    queryKey: ["/api/patient-profiles"],
+    enabled: !!user,
+  });
+
+  // Provider mutations
+  const createProviderMutation = useMutation({
     mutationFn: async (data: FormData) => {
       const response = await apiRequest("POST", "/api/providers", data);
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/providers"] });
-      setDialogOpen(false);
+      setProviderDialogOpen(false);
     },
   });
 
-  const updateMutation = useMutation({
+  const updateProviderMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: FormData }) => {
       const response = await apiRequest("PATCH", `/api/providers/${id}`, data);
       return response.json();
@@ -439,12 +924,54 @@ export default function Profile() {
     },
   });
 
-  const deleteMutation = useMutation({
+  const deleteProviderMutation = useMutation({
     mutationFn: async (id: number) => {
       return apiRequest("DELETE", `/api/providers/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/providers"] });
+    },
+  });
+
+  // Patient profile mutations
+  const createProfileMutation = useMutation({
+    mutationFn: async (data: PatientProfileFormData) => {
+      const response = await apiRequest("POST", "/api/patient-profiles", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/patient-profiles"] });
+      setProfileDialogOpen(false);
+    },
+  });
+
+  const updateProfileMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: PatientProfileFormData }) => {
+      const response = await apiRequest("PATCH", `/api/patient-profiles/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/patient-profiles"] });
+      setEditingProfile(null);
+    },
+  });
+
+  const deleteProfileMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("DELETE", `/api/patient-profiles/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/patient-profiles"] });
+    },
+  });
+
+  const setDefaultProfileMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest("POST", `/api/patient-profiles/${id}/set-default`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/patient-profiles"] });
     },
   });
 
@@ -516,70 +1043,145 @@ export default function Profile() {
         </CardContent>
       </Card>
 
-      <Separator />
+      <Tabs defaultValue="profiles" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="profiles" data-testid="tab-patient-profiles">
+            <Users className="mr-2 h-4 w-4" />
+            Patient Profiles
+          </TabsTrigger>
+          <TabsTrigger value="providers" data-testid="tab-providers">
+            <Stethoscope className="mr-2 h-4 w-4" />
+            Healthcare Providers
+          </TabsTrigger>
+        </TabsList>
 
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-semibold">Healthcare Providers</h2>
-            <p className="text-sm text-muted-foreground">
-              Keep track of your doctors, dentists, and other healthcare providers
-            </p>
-          </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button data-testid="button-add-provider">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Provider
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Add Healthcare Provider</DialogTitle>
-                <DialogDescription>
-                  Add a new doctor, dentist, or other healthcare provider to your records.
-                </DialogDescription>
-              </DialogHeader>
-              <ProviderForm
-                onSubmit={(data) => createMutation.mutate(data)}
-                onCancel={() => setDialogOpen(false)}
-                isPending={createMutation.isPending}
-              />
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        {providersLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : providers && providers.length > 0 ? (
-          <div className="grid gap-4">
-            {providers.map((provider) => (
-              <ProviderCard
-                key={provider.id}
-                provider={provider}
-                onDelete={(id) => deleteMutation.mutate(id)}
-                onEdit={(p) => setEditingProvider(p)}
-              />
-            ))}
-          </div>
-        ) : (
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Stethoscope className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">No providers yet</h3>
-              <p className="text-muted-foreground text-center mb-4">
-                Add your GP, dentist, specialists, and other healthcare providers to keep all your medical contacts in one place.
+        <TabsContent value="profiles" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Patient Profiles</h2>
+              <p className="text-sm text-muted-foreground">
+                Manage health information for yourself and family members
               </p>
-              <Button onClick={() => setDialogOpen(true)} data-testid="button-add-first-provider">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Your First Provider
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+            </div>
+            <Dialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-add-profile">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Profile
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Add Patient Profile</DialogTitle>
+                  <DialogDescription>
+                    Add a new profile for yourself or a family member to track their health information separately.
+                  </DialogDescription>
+                </DialogHeader>
+                <PatientProfileForm
+                  onSubmit={(data) => createProfileMutation.mutate(data)}
+                  onCancel={() => setProfileDialogOpen(false)}
+                  isPending={createProfileMutation.isPending}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {profilesLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : patientProfiles && patientProfiles.length > 0 ? (
+            <div className="grid gap-4">
+              {patientProfiles.map((profile) => (
+                <PatientProfileCard
+                  key={profile.id}
+                  profile={profile}
+                  onDelete={(id) => deleteProfileMutation.mutate(id)}
+                  onEdit={(p) => setEditingProfile(p)}
+                  onSetDefault={(id) => setDefaultProfileMutation.mutate(id)}
+                />
+              ))}
+            </div>
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Users className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">No patient profiles yet</h3>
+                <p className="text-muted-foreground text-center mb-4">
+                  Create a profile for yourself or add family members to track health information for everyone.
+                </p>
+                <Button onClick={() => setProfileDialogOpen(true)} data-testid="button-add-first-profile">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Your First Profile
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="providers" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Healthcare Providers</h2>
+              <p className="text-sm text-muted-foreground">
+                Keep track of your doctors, dentists, and other healthcare providers
+              </p>
+            </div>
+            <Dialog open={providerDialogOpen} onOpenChange={setProviderDialogOpen}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-add-provider">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Provider
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Add Healthcare Provider</DialogTitle>
+                  <DialogDescription>
+                    Add a new doctor, dentist, or other healthcare provider to your records.
+                  </DialogDescription>
+                </DialogHeader>
+                <ProviderForm
+                  onSubmit={(data) => createProviderMutation.mutate(data)}
+                  onCancel={() => setProviderDialogOpen(false)}
+                  isPending={createProviderMutation.isPending}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {providersLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : providers && providers.length > 0 ? (
+            <div className="grid gap-4">
+              {providers.map((provider) => (
+                <ProviderCard
+                  key={provider.id}
+                  provider={provider}
+                  onDelete={(id) => deleteProviderMutation.mutate(id)}
+                  onEdit={(p) => setEditingProvider(p)}
+                />
+              ))}
+            </div>
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Stethoscope className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">No providers yet</h3>
+                <p className="text-muted-foreground text-center mb-4">
+                  Add your GP, dentist, specialists, and other healthcare providers to keep all your medical contacts in one place.
+                </p>
+                <Button onClick={() => setProviderDialogOpen(true)} data-testid="button-add-first-provider">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Your First Provider
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={!!editingProvider} onOpenChange={(open) => !open && setEditingProvider(null)}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -591,9 +1193,9 @@ export default function Profile() {
           </DialogHeader>
           {editingProvider && (
             <ProviderForm
-              onSubmit={(data) => updateMutation.mutate({ id: editingProvider.id, data })}
+              onSubmit={(data) => updateProviderMutation.mutate({ id: editingProvider.id, data })}
               onCancel={() => setEditingProvider(null)}
-              isPending={updateMutation.isPending}
+              isPending={updateProviderMutation.isPending}
               defaultValues={{
                 type: editingProvider.type,
                 name: editingProvider.name,
@@ -603,6 +1205,39 @@ export default function Profile() {
                 email: editingProvider.email || "",
                 address: editingProvider.address || "",
                 notes: editingProvider.notes || "",
+              }}
+              isEditing
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editingProfile} onOpenChange={(open) => !open && setEditingProfile(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Patient Profile</DialogTitle>
+            <DialogDescription>
+              Update the health information for this profile.
+            </DialogDescription>
+          </DialogHeader>
+          {editingProfile && (
+            <PatientProfileForm
+              onSubmit={(data) => updateProfileMutation.mutate({ id: editingProfile.id, data })}
+              onCancel={() => setEditingProfile(null)}
+              isPending={updateProfileMutation.isPending}
+              defaultValues={{
+                name: editingProfile.name,
+                relationship: editingProfile.relationship,
+                dateOfBirth: editingProfile.dateOfBirth ? new Date(editingProfile.dateOfBirth).toISOString().split('T')[0] : "",
+                gender: editingProfile.gender || "",
+                bloodType: editingProfile.bloodType || "",
+                allergies: editingProfile.allergies || "",
+                conditions: editingProfile.conditions || "",
+                medications: editingProfile.medications || "",
+                emergencyContact: editingProfile.emergencyContact || "",
+                emergencyPhone: editingProfile.emergencyPhone || "",
+                notes: editingProfile.notes || "",
+                isDefault: editingProfile.isDefault || false,
               }}
               isEditing
             />
