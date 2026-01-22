@@ -85,12 +85,6 @@ function AppContent() {
       logout();
     };
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "hidden") {
-        handleAutoLogout();
-      }
-    };
-
     const handleOnlineStatus = () => {
       if (!navigator.onLine) {
         handleAutoLogout();
@@ -98,12 +92,10 @@ function AppContent() {
     };
 
     window.addEventListener("pagehide", handleAutoLogout);
-    window.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("offline", handleOnlineStatus);
 
     return () => {
       window.removeEventListener("pagehide", handleAutoLogout);
-      window.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("offline", handleOnlineStatus);
     };
   }, [isAuthenticated, logout]);
