@@ -1,9 +1,19 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { format, formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow, subDays, isAfter, startOfDay } from "date-fns";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 import {
   Thermometer,
   Plus,
@@ -14,6 +24,9 @@ import {
   Scale,
   Wind,
   Activity,
+  TrendingUp,
+  TrendingDown,
+  Minus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -411,6 +424,38 @@ export default function Readings() {
     new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime()
   );
 
+  const stats = useMemo(() => {
+    if (!readings || activeTab === "all") return null;
+    
+    const typeReadings = readings
+      .filter(r => r.type === activeTab)
+      .sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime());
+    
+    if (typeReadings.length === 0) return null;
+
+    const values = typeReadings.map(r => r.value);
+    const avg = values.reduce((a, b) => a + b, 0) / values.length;
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    
+    let trend: "up" | "down" | "stable" = "stable";
+    if (typeReadings.length >= 2) {
+      const last = typeReadings[typeReadings.length - 1].value;
+      const prev = typeReadings[typeReadings.length - 2].value;
+      if (last > prev) trend = "up";
+      else if (last < prev) trend = "down";
+    }
+
+    const chartData = typeReadings.map(r => ({
+      date: format(new Date(r.recordedAt), "MMM d"),
+      value: r.value,
+      secondary: r.secondaryValue,
+      fullDate: format(new Date(r.recordedAt), "PPP p"),
+    }));
+
+    return { avg, min, max, trend, chartData };
+  }, [readings, activeTab]);
+
   const readingCounts = readings?.reduce((acc, r) => {
     acc[r.type] = (acc[r.type] || 0) + 1;
     return acc;
@@ -482,6 +527,99 @@ export default function Readings() {
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {activeTab !== "all" && stats && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Average</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {stats.avg.toFixed(1)} <span className="text-sm font-normal text-muted-foreground">{getReadingTypeInfo(activeTab).unit}</span>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Range (Min/Max)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {stats.min.toFixed(1)} - {stats.max.toFixed(1)}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Recent Trend</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2 text-2xl font-bold">
+                {stats.trend === "up" && <TrendingUp className="text-destructive h-6 w-6" />}
+                {stats.trend === "down" && <TrendingDown className="text-blue-500 h-6 w-6" />}
+                {stats.trend === "stable" && <Minus className="text-muted-foreground h-6 w-6" />}
+                <span className="capitalize">{stats.trend}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="md:col-span-3">
+            <CardHeader>
+              <CardTitle>History Trend</CardTitle>
+              <CardDescription>Visual trend of your {getReadingTypeInfo(activeTab).label.toLowerCase()} readings</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[300px] w-full pt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={stats.chartData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis 
+                    dataKey="date" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12 }}
+                  />
+                  <YAxis 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12 }}
+                    domain={['auto', 'auto']}
+                  />
+                  <RechartsTooltip 
+                    contentStyle={{ 
+                      borderRadius: '8px', 
+                      border: 'none', 
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)' 
+                    }}
+                    labelStyle={{ fontWeight: 'bold', marginBottom: '4px' }}
+                  />
+                  <Legend verticalAlign="top" height={36}/>
+                  <Line 
+                    type="monotone" 
+                    dataKey="value" 
+                    name={getReadingTypeInfo(activeTab).hasSecondary ? "Systolic" : "Reading"}
+                    stroke="hsl(var(--primary))" 
+                    strokeWidth={2}
+                    dot={{ r: 4, fill: "hsl(var(--primary))" }}
+                    activeDot={{ r: 6 }}
+                  />
+                  {getReadingTypeInfo(activeTab).hasSecondary && (
+                    <Line 
+                      type="monotone" 
+                      dataKey="secondary" 
+                      name="Diastolic"
+                      stroke="hsl(var(--destructive))" 
+                      strokeWidth={2}
+                      dot={{ r: 4, fill: "hsl(var(--destructive))" }}
+                      activeDot={{ r: 6 }}
+                    />
+                  )}
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
         </div>
       )}
 
