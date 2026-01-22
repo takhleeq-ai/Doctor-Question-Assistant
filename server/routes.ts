@@ -51,7 +51,7 @@ function validateIdParam(req: Request, res: Response, next: NextFunction) {
 
 const generateQuestionsSchema = z.object({
   condition: z.string().min(1).max(500),
-  symptoms: z.string().min(1).max(2000),
+  symptoms: z.string().max(2000).optional(),
   medications: z.string().max(1000).optional(),
   appointmentId: z.string().max(20).optional(),
 });
@@ -634,7 +634,7 @@ Generate comprehensive but focused questions I should ask my doctor, organized b
       await storage.createQuestionSet({
         appointmentId: appointmentId ? parseInt(appointmentId) : null,
         condition,
-        symptoms,
+        symptoms: symptoms || "",
         medications: medications || null,
         generatedQuestions: JSON.stringify(generatedData.questions),
         redFlags: generatedData.redFlags ? JSON.stringify(generatedData.redFlags) : null,
