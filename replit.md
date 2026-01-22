@@ -19,6 +19,7 @@ The MVP is fully implemented with all core features functional.
 - **Reminders**: Customizable periodic reminders for logging readings (hourly to weekly intervals)
 - **Nearby Services**: Find pharmacies, GPs, dentists, and A&E/hospitals near you using device location or manual address entry
 - **PWA Support**: Installable web app with service worker for offline functionality
+- **Offline Storage**: IndexedDB-based local data storage with automatic sync when back online
 
 ## Tech Stack
 - **Frontend**: React, TypeScript, Tailwind CSS, Shadcn UI, TanStack Query

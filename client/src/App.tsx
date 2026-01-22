@@ -9,6 +9,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { PatientProfileProvider } from "@/hooks/use-patient-profile";
 import { PatientProfileSelector } from "@/components/patient-profile-selector";
+import { OfflineIndicator } from "@/components/offline-indicator";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import NotFound from "@/pages/not-found";
@@ -55,6 +56,7 @@ function AuthenticatedApp() {
             <header className="flex items-center justify-between gap-2 p-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
               <div className="flex items-center gap-2">
+                <OfflineIndicator />
                 <PatientProfileSelector />
                 <ThemeToggle />
               </div>

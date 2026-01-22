@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format, formatDistanceToNow } from "date-fns";
+import { useOfflineSymptoms, useOnlineStatus } from "@/hooks/use-offline-data";
 import {
   Activity,
   Plus,
@@ -325,35 +326,71 @@ function SymptomForm({
 
 export default function Symptoms() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [offlineSymptoms, setOfflineSymptoms] = useState<Symptom[]>([]);
+  const online = useOnlineStatus();
+  const { cacheSymptoms, getOfflineSymptoms, addOfflineSymptom, deleteOfflineSymptom } = useOfflineSymptoms();
 
   const { data: symptoms, isLoading } = useQuery<Symptom[]>({
     queryKey: ["/api/symptoms"],
+    enabled: online,
   });
 
   const { data: appointments } = useQuery<Appointment[]>({
     queryKey: ["/api/appointments"],
+    enabled: online,
   });
+
+  useEffect(() => {
+    if (symptoms && symptoms.length > 0) {
+      cacheSymptoms(symptoms);
+    }
+  }, [symptoms, cacheSymptoms]);
+
+  useEffect(() => {
+    if (!online) {
+      getOfflineSymptoms().then(setOfflineSymptoms);
+    }
+  }, [online, getOfflineSymptoms]);
+
+  const displaySymptoms = online ? symptoms : offlineSymptoms;
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
       const sanitizedData = {
         ...data,
         appointmentId: data.appointmentId && data.appointmentId !== null ? data.appointmentId : null,
+        recordedAt: new Date(),
       };
+      
+      if (!online) {
+        const offlineItem = await addOfflineSymptom(sanitizedData);
+        setOfflineSymptoms(prev => [offlineItem, ...prev]);
+        return offlineItem;
+      }
+      
       return apiRequest("POST", "/api/symptoms", sanitizedData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/symptoms"] });
+      if (online) {
+        queryClient.invalidateQueries({ queryKey: ["/api/symptoms"] });
+      }
       setDialogOpen(false);
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
+      if (!online) {
+        await deleteOfflineSymptom(id);
+        setOfflineSymptoms(prev => prev.filter(s => s.id !== id));
+        return;
+      }
       return apiRequest("DELETE", `/api/symptoms/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/symptoms"] });
+      if (online) {
+        queryClient.invalidateQueries({ queryKey: ["/api/symptoms"] });
+      }
     },
   });
 
@@ -365,11 +402,11 @@ export default function Symptoms() {
     deleteMutation.mutate(id);
   };
 
-  const sortedSymptoms = symptoms?.sort((a, b) => 
+  const sortedSymptoms = displaySymptoms?.sort((a, b) => 
     new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime()
   );
 
-  const recentSevereSymptoms = symptoms?.filter(s => s.severity >= 7).slice(0, 3);
+  const recentSevereSymptoms = displaySymptoms?.filter(s => s.severity >= 7).slice(0, 3);
 
   return (
     <div className="container max-w-4xl py-6 space-y-6">
