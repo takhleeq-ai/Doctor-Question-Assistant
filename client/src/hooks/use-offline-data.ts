@@ -47,8 +47,13 @@ export function useOfflineSync() {
     let failCount = 0;
 
     try {
-      const pending = await getPendingSync();
+      const pending = await getPendingSync().catch(err => {
+        console.error("Failed to get pending sync items:", err);
+        return [];
+      });
       setPendingCount(pending.length);
+
+      if (pending.length === 0) return;
 
       const sortedPending = [...pending].sort((a, b) => a.timestamp - b.timestamp);
 
@@ -119,8 +124,12 @@ export function useOfflineSync() {
   }, [online, syncPendingItems]);
 
   useEffect(() => {
-    getPendingSync().then((pending) => setPendingCount(pending.length));
-    getLastSyncTime().then((time) => setLastSync(time));
+    getPendingSync()
+      .then((pending) => setPendingCount(pending.length))
+      .catch(err => console.error("Initial pending sync fetch failed:", err));
+    getLastSyncTime()
+      .then((time) => setLastSync(time))
+      .catch(err => console.error("Initial last sync time fetch failed:", err));
   }, []);
 
   return { 

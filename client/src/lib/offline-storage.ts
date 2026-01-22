@@ -28,9 +28,17 @@ function openDatabase(): Promise<IDBDatabase> {
 
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-    request.onerror = () => reject(request.error);
+    request.onerror = (event) => {
+      console.error("IndexedDB open error:", request.error);
+      reject(request.error);
+    };
     request.onsuccess = () => {
       db = request.result;
+      db.onversionchange = () => {
+        db?.close();
+        db = null;
+        window.location.reload();
+      };
       resolve(db);
     };
 
