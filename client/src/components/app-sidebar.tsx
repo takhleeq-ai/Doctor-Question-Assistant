@@ -8,6 +8,9 @@ import {
   Bell,
   Clock,
   Heart,
+  User,
+  LogIn,
+  Loader2,
 } from "lucide-react";
 import {
   Sidebar,
@@ -21,6 +24,9 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
 
 const mainNavItems = [
   {
@@ -63,6 +69,11 @@ const mainNavItems = [
 
 export function AppSidebar() {
   const [location] = useLocation();
+  const { user, isLoading } = useAuth();
+
+  const userInitials = user 
+    ? `${user.firstName?.[0] || ""}${user.lastName?.[0] || user.email?.[0] || "U"}`.toUpperCase()
+    : "?";
 
   return (
     <Sidebar>
@@ -102,13 +113,43 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4">
+      <SidebarFooter className="p-4 space-y-3">
         <div className="flex items-center gap-2 rounded-md bg-accent/50 p-3">
-          <Heart className="h-4 w-4 text-destructive" />
+          <Heart className="h-4 w-4 text-destructive shrink-0" />
           <p className="text-xs text-muted-foreground">
             For informational purposes only. Not medical advice.
           </p>
         </div>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-2">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
+        ) : user ? (
+          <Link href="/profile">
+            <div className="flex items-center gap-3 rounded-md p-2 hover-elevate cursor-pointer" data-testid="nav-profile">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={user.profileImageUrl || undefined} alt={user.firstName || "User"} />
+                <AvatarFallback className="text-xs">{userInitials}</AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="text-sm font-medium truncate">
+                  {user.firstName && user.lastName 
+                    ? `${user.firstName} ${user.lastName}` 
+                    : user.email || "User"}
+                </span>
+                <span className="text-xs text-muted-foreground truncate">View Profile</span>
+              </div>
+            </div>
+          </Link>
+        ) : (
+          <Button asChild variant="outline" className="w-full" data-testid="nav-login">
+            <a href="/api/login">
+              <LogIn className="mr-2 h-4 w-4" />
+              Sign In
+            </a>
+          </Button>
+        )}
       </SidebarFooter>
     </Sidebar>
   );
