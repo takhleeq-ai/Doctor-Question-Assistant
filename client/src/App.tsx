@@ -9,7 +9,10 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { PatientProfileProvider } from "@/hooks/use-patient-profile";
 import { PatientProfileSelector } from "@/components/patient-profile-selector";
+import { useAuth } from "@/hooks/use-auth";
+import { Loader2 } from "lucide-react";
 import NotFound from "@/pages/not-found";
+import Landing from "@/pages/landing";
 import QuestionsGenerator from "@/pages/questions-generator";
 import Appointments from "@/pages/appointments";
 import Symptoms from "@/pages/symptoms";
@@ -37,35 +40,59 @@ function Router() {
   );
 }
 
-function App() {
+function AuthenticatedApp() {
   const style = {
     "--sidebar-width": "18rem",
     "--sidebar-width-icon": "3.5rem",
   };
 
   return (
+    <PatientProfileProvider>
+      <SidebarProvider style={style as React.CSSProperties}>
+        <div className="flex h-screen w-full">
+          <AppSidebar />
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <header className="flex items-center justify-between gap-2 p-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+              <SidebarTrigger data-testid="button-sidebar-toggle" />
+              <div className="flex items-center gap-2">
+                <PatientProfileSelector />
+                <ThemeToggle />
+              </div>
+            </header>
+            <main className="flex-1 overflow-auto">
+              <Router />
+            </main>
+          </div>
+        </div>
+      </SidebarProvider>
+    </PatientProfileProvider>
+  );
+}
+
+function AppContent() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Landing />;
+  }
+
+  return <AuthenticatedApp />;
+}
+
+function App() {
+  return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" storageKey="healthprep-theme">
         <TooltipProvider>
-          <PatientProfileProvider>
-            <SidebarProvider style={style as React.CSSProperties}>
-              <div className="flex h-screen w-full">
-                <AppSidebar />
-                <div className="flex flex-col flex-1 overflow-hidden">
-                  <header className="flex items-center justify-between gap-2 p-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                    <SidebarTrigger data-testid="button-sidebar-toggle" />
-                    <div className="flex items-center gap-2">
-                      <PatientProfileSelector />
-                      <ThemeToggle />
-                    </div>
-                  </header>
-                  <main className="flex-1 overflow-auto">
-                    <Router />
-                  </main>
-                </div>
-              </div>
-            </SidebarProvider>
-          </PatientProfileProvider>
+          <AppContent />
           <Toaster />
         </TooltipProvider>
       </ThemeProvider>

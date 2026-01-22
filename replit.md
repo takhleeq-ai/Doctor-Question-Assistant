@@ -84,6 +84,13 @@ shared/
   - Coerces date strings to Date objects for proper validation
 
 ## Recent Changes
+- January 22, 2026: Added landing page for non-authenticated users
+  - Professional hero section with "Prepare for Doctor Visits with Confidence" messaging
+  - Features grid showcasing all 8 key features with icons
+  - Benefits bar with checkmarks
+  - Call-to-action section with primary color background
+  - Automatic redirect to app after login
+
 - January 22, 2026: Added export/share and child-friendly UI features
   - Export & Share page to download health data as text file or email via SendGrid
   - Child-friendly colorful purple/pink theme when selected patient is under 15 years old
