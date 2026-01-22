@@ -69,7 +69,7 @@ export default function QuestionsGenerator() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       condition: "",
-      symptoms: "N/A",
+      symptoms: "",
       medications: "",
       appointmentId: "",
     },

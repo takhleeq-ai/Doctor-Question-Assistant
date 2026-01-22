@@ -615,13 +615,12 @@ ${medications ? `Current Medications: ${medications}` : "No medications listed"}
 Generate comprehensive but focused questions I should ask my doctor, organized by category. Also identify any symptoms or combinations that might be red flags worth mentioning immediately.`;
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4.1",
+        model: "gpt-4o",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
         ],
         response_format: { type: "json_object" },
-        max_completion_tokens: 2048,
       });
 
       const content = response.choices[0]?.message?.content;
