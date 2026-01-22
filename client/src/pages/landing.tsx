@@ -15,9 +15,17 @@ import {
   Download,
   Smartphone
 } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { usePwaInstall } from "@/hooks/use-pwa-install";
 
 const features = [
@@ -72,14 +80,19 @@ const benefits = [
 ];
 
 export default function Landing() {
-  const { isInstallable, isInstalled, install } = usePwaInstall();
+  const { isInstallable, isInstalled, isIOSDevice, install } = usePwaInstall();
+  const [showIOSInstructions, setShowIOSInstructions] = useState(false);
 
   const handleLogin = () => {
     window.location.href = "/api/login";
   };
 
   const handleInstall = async () => {
-    await install();
+    if (isIOSDevice) {
+      setShowIOSInstructions(true);
+    } else {
+      await install();
+    }
   };
 
   return (
@@ -224,6 +237,60 @@ export default function Landing() {
             </p>
           </div>
         </div>
+
+      <Dialog open={showIOSInstructions} onOpenChange={setShowIOSInstructions}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Smartphone className="h-5 w-5" />
+              Install HealthPrep on iPhone/iPad
+            </DialogTitle>
+            <DialogDescription>
+              Follow these simple steps to add HealthPrep to your home screen
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-medium">
+                1
+              </div>
+              <div>
+                <p className="font-medium">Tap the Share button</p>
+                <p className="text-sm text-muted-foreground">
+                  Look for the share icon (square with arrow) at the bottom of Safari
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-medium">
+                2
+              </div>
+              <div>
+                <p className="font-medium">Scroll down and tap "Add to Home Screen"</p>
+                <p className="text-sm text-muted-foreground">
+                  You may need to scroll down in the share menu to find this option
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-medium">
+                3
+              </div>
+              <div>
+                <p className="font-medium">Tap "Add" to confirm</p>
+                <p className="text-sm text-muted-foreground">
+                  HealthPrep will appear on your home screen like a regular app
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={() => setShowIOSInstructions(false)} data-testid="button-close-ios-instructions">
+              Got it
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       </footer>
     </div>
   );

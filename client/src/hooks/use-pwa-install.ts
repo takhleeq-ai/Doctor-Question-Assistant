@@ -5,14 +5,32 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+function isIOS(): boolean {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+}
+
+function isInStandaloneMode(): boolean {
+  return window.matchMedia("(display-mode: standalone)").matches || 
+    (window.navigator as any).standalone === true;
+}
+
 export function usePwaInstall() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isInstallable, setIsInstallable] = useState(false);
+  const [isIOSDevice, setIsIOSDevice] = useState(false);
 
   useEffect(() => {
-    if (window.matchMedia("(display-mode: standalone)").matches) {
+    const ios = isIOS();
+    setIsIOSDevice(ios);
+
+    if (isInStandaloneMode()) {
       setIsInstalled(true);
+      return;
+    }
+
+    if (ios) {
+      setIsInstallable(true);
       return;
     }
 
@@ -52,5 +70,5 @@ export function usePwaInstall() {
     return false;
   };
 
-  return { isInstallable, isInstalled, install };
+  return { isInstallable, isInstalled, isIOSDevice, install };
 }
