@@ -3,10 +3,26 @@ import { useQuery } from "@tanstack/react-query";
 import type { PatientProfile } from "@shared/schema";
 import { useAuth } from "./use-auth";
 
+function calculateAge(dateOfBirth: Date | string | null | undefined): number | null {
+  if (!dateOfBirth) return null;
+  const dob = new Date(dateOfBirth);
+  if (isNaN(dob.getTime())) return null;
+  
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const monthDiff = today.getMonth() - dob.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+    age--;
+  }
+  return age;
+}
+
 interface PatientProfileContextType {
   selectedProfile: PatientProfile | null;
   profiles: PatientProfile[];
   isLoading: boolean;
+  isChildMode: boolean;
+  patientAge: number | null;
   selectProfile: (profile: PatientProfile) => void;
 }
 
@@ -20,6 +36,20 @@ export function PatientProfileProvider({ children }: { children: ReactNode }) {
     queryKey: ["/api/patient-profiles"],
     enabled: !!user,
   });
+
+  const patientAge = calculateAge(selectedProfile?.dateOfBirth);
+  const isChildMode = patientAge !== null && patientAge < 15;
+
+  useEffect(() => {
+    if (isChildMode) {
+      document.documentElement.classList.add("child-mode");
+    } else {
+      document.documentElement.classList.remove("child-mode");
+    }
+    return () => {
+      document.documentElement.classList.remove("child-mode");
+    };
+  }, [isChildMode]);
 
   useEffect(() => {
     if (profiles.length > 0 && !selectedProfile) {
@@ -42,7 +72,7 @@ export function PatientProfileProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <PatientProfileContext.Provider value={{ selectedProfile, profiles, isLoading, selectProfile }}>
+    <PatientProfileContext.Provider value={{ selectedProfile, profiles, isLoading, isChildMode, patientAge, selectProfile }}>
       {children}
     </PatientProfileContext.Provider>
   );

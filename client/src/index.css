@@ -96,6 +96,117 @@
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 }
 
+/* CHILD-FRIENDLY MODE - Colorful, playful palette for patients under 15 */
+.child-mode {
+  --button-outline: rgba(0,0,0, .10);
+  --badge-outline: rgba(0,0,0, .05);
+
+  --opaque-button-border-intensity: -8;
+
+  --elevate-1: rgba(0,0,0, .03);
+  --elevate-2: rgba(0,0,0, .08);
+
+  --background: 280 60% 98%;
+  --foreground: 280 47% 15%;
+  --border: 280 40% 88%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 280 47% 15%;
+  --card-border: 280 40% 88%;
+
+  --sidebar: 280 50% 96%;
+  --sidebar-foreground: 280 47% 15%;
+  --sidebar-border: 280 40% 82%;
+  --sidebar-primary: 280 80% 55%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 330 70% 92%;
+  --sidebar-accent-foreground: 330 70% 35%;
+  --sidebar-ring: 280 80% 55%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 280 47% 15%;
+  --popover-border: 280 40% 88%;
+
+  --primary: 280 80% 55%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 45 100% 95%;
+  --secondary-foreground: 45 90% 30%;
+
+  --muted: 280 40% 96%;
+  --muted-foreground: 280 20% 50%;
+
+  --accent: 330 70% 92%;
+  --accent-foreground: 330 70% 35%;
+
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+
+  --input: 280 40% 90%;
+  --ring: 280 80% 55%;
+
+  --chart-1: 280 80% 55%;
+  --chart-2: 330 70% 60%;
+  --chart-3: 45 95% 55%;
+  --chart-4: 160 70% 50%;
+  --chart-5: 200 80% 55%;
+}
+
+.child-mode.dark {
+  --button-outline: rgba(255,255,255, .10);
+  --badge-outline: rgba(255,255,255, .05);
+
+  --opaque-button-border-intensity: 9;
+
+  --elevate-1: rgba(255,255,255, .04);
+  --elevate-2: rgba(255,255,255, .09);
+
+  --background: 280 50% 10%;
+  --foreground: 280 30% 95%;
+  --border: 280 40% 20%;
+
+  --card: 280 50% 13%;
+  --card-foreground: 280 30% 95%;
+  --card-border: 280 40% 20%;
+
+  --sidebar: 280 50% 12%;
+  --sidebar-foreground: 280 30% 95%;
+  --sidebar-border: 280 40% 20%;
+  --sidebar-primary: 280 75% 60%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 330 50% 22%;
+  --sidebar-accent-foreground: 330 60% 75%;
+  --sidebar-ring: 280 75% 60%;
+
+  --popover: 280 50% 13%;
+  --popover-foreground: 280 30% 95%;
+  --popover-border: 280 40% 20%;
+
+  --primary: 280 75% 60%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 45 50% 18%;
+  --secondary-foreground: 45 70% 85%;
+
+  --muted: 280 40% 18%;
+  --muted-foreground: 280 25% 60%;
+
+  --accent: 330 50% 22%;
+  --accent-foreground: 330 60% 75%;
+
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+
+  --input: 280 40% 22%;
+  --ring: 280 75% 60%;
+
+  --chart-1: 280 75% 60%;
+  --chart-2: 330 65% 60%;
+  --chart-3: 45 85% 60%;
+  --chart-4: 160 65% 55%;
+  --chart-5: 200 75% 60%;
+}
+
 .dark {
   --button-outline: rgba(255,255,255, .10);
   --badge-outline: rgba(255,255,255, .05);

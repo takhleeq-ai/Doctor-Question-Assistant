@@ -585,5 +585,57 @@ Generate comprehensive but focused questions I should ask my doctor, organized b
     }
   });
 
+  // Export/Share - Email endpoint
+  app.post("/api/export/email", isAuthenticated, async (req: any, res) => {
+    try {
+      const { email, report } = req.body;
+      
+      if (!email || !report) {
+        return res.status(400).json({ error: "Email and report are required" });
+      }
+
+      // Check if SendGrid is configured
+      const sendgridApiKey = process.env.SENDGRID_API_KEY;
+      const senderEmail = process.env.SENDGRID_SENDER_EMAIL || "noreply@healthprep.app";
+      
+      if (!sendgridApiKey) {
+        return res.status(503).json({ 
+          error: "Email service not configured. Please set up SendGrid integration to enable email sharing." 
+        });
+      }
+
+      // Send email via SendGrid
+      const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${sendgridApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          personalizations: [{ to: [{ email }] }],
+          from: { email: senderEmail, name: "HealthPrep" },
+          subject: "Your HealthPrep Health Report",
+          content: [
+            {
+              type: "text/plain",
+              value: report,
+            },
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("SendGrid error:", errorText);
+        throw new Error("Failed to send email");
+      }
+
+      res.json({ success: true, message: "Email sent successfully" });
+    } catch (error) {
+      console.error("Error sending email:", error);
+      res.status(500).json({ error: "Failed to send email" });
+    }
+  });
+
   return httpServer;
 }

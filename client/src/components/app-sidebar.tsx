@@ -12,6 +12,7 @@ import {
   LogIn,
   Loader2,
   MapPin,
+  Share2,
 } from "lucide-react";
 import {
   Sidebar,
@@ -71,6 +72,12 @@ const mainNavItems = [
     url: "/nearby",
     icon: MapPin,
     description: "Find pharmacies, doctors, hospitals",
+  },
+  {
+    title: "Export & Share",
+    url: "/export",
+    icon: Share2,
+    description: "Export or email health data",
   },
 ];
 
