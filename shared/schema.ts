@@ -173,7 +173,8 @@ export const readingsRelations = relations(readings, ({ one }) => ({
 
 export const insertReadingSchema = createInsertSchema(readings).omit({
   id: true,
-  recordedAt: true,
+}).extend({
+  recordedAt: z.string().datetime().optional(),
 });
 
 export type Reading = typeof readings.$inferSelect;

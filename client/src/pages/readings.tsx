@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { format, formatDistanceToNow, subDays, isAfter, startOfDay } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import {
   LineChart,
   Line,
@@ -89,6 +89,8 @@ const formSchema = z.object({
   unit: z.string().min(1),
   notes: z.string().optional(),
   appointmentId: z.number().optional().nullable(),
+  recordedDate: z.string().min(1, "Date is required"),
+  recordedTime: z.string().min(1, "Time is required"),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -186,6 +188,7 @@ function ReadingForm({
   isPending: boolean;
   appointments?: Appointment[];
 }) {
+  const now = new Date();
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -195,6 +198,8 @@ function ReadingForm({
       unit: "",
       notes: "",
       appointmentId: null,
+      recordedDate: format(now, "yyyy-MM-dd"),
+      recordedTime: format(now, "HH:mm"),
     },
   });
 
@@ -307,6 +312,43 @@ function ReadingForm({
                 <input type="hidden" {...field} />
               )}
             />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="recordedDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Date</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        data-testid="input-reading-date"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="recordedTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Time</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="time"
+                        data-testid="input-reading-time"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
           </>
         )}
 
@@ -389,9 +431,15 @@ export default function Readings() {
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
+      const recordedAt = new Date(`${data.recordedDate}T${data.recordedTime}`);
       const sanitizedData = {
-        ...data,
+        type: data.type,
+        value: data.value,
+        secondaryValue: data.secondaryValue,
+        unit: data.unit,
+        notes: data.notes,
         appointmentId: data.appointmentId && data.appointmentId !== null ? data.appointmentId : null,
+        recordedAt: recordedAt.toISOString(),
       };
       return apiRequest("POST", "/api/readings", sanitizedData);
     },

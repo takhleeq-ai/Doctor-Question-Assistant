@@ -201,7 +201,11 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createReading(data: InsertReading): Promise<Reading> {
-    const [reading] = await db.insert(readings).values(data).returning();
+    const insertData = {
+      ...data,
+      recordedAt: data.recordedAt ? new Date(data.recordedAt) : new Date(),
+    };
+    const [reading] = await db.insert(readings).values(insertData).returning();
     return reading;
   }
   
