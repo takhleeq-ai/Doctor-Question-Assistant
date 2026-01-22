@@ -1,7 +1,7 @@
 import type { Appointment, Symptom, Reading, Reminder } from "@shared/schema";
 
 const DB_NAME = "healthprep-offline";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 interface PendingSync {
   id: string;
@@ -9,6 +9,12 @@ interface PendingSync {
   action: "create" | "update" | "delete";
   data: any;
   timestamp: number;
+}
+
+interface SyncMetadata {
+  id: string;
+  lastSyncTime: number;
+  lastSyncStatus: "success" | "partial" | "failed";
 }
 
 let db: IDBDatabase | null = null;
@@ -45,6 +51,9 @@ function openDatabase(): Promise<IDBDatabase> {
       }
       if (!database.objectStoreNames.contains("pendingSync")) {
         database.createObjectStore("pendingSync", { keyPath: "id" });
+      }
+      if (!database.objectStoreNames.contains("syncMetadata")) {
+        database.createObjectStore("syncMetadata", { keyPath: "id" });
       }
     };
   });
@@ -144,6 +153,49 @@ export async function deleteLocalItem(storeName: string, id: number): Promise<vo
 
 export function isOnline(): boolean {
   return navigator.onLine;
+}
+
+export async function getLastSyncTime(): Promise<number | null> {
+  try {
+    const store = await getStore("syncMetadata");
+    return new Promise((resolve) => {
+      const request = store.get("lastSync");
+      request.onsuccess = () => {
+        const result = request.result as SyncMetadata | undefined;
+        resolve(result?.lastSyncTime || null);
+      };
+      request.onerror = () => resolve(null);
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function setLastSyncTime(time: number, status: "success" | "partial" | "failed"): Promise<void> {
+  try {
+    const store = await getStore("syncMetadata", "readwrite");
+    const metadata: SyncMetadata = {
+      id: "lastSync",
+      lastSyncTime: time,
+      lastSyncStatus: status,
+    };
+    store.put(metadata);
+  } catch (error) {
+    console.error("Failed to save sync metadata:", error);
+  }
+}
+
+export async function getSyncStatus(): Promise<SyncMetadata | null> {
+  try {
+    const store = await getStore("syncMetadata");
+    return new Promise((resolve) => {
+      const request = store.get("lastSync");
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => resolve(null);
+    });
+  } catch {
+    return null;
+  }
 }
 
 export function onOnlineStatusChange(callback: (online: boolean) => void): () => void {

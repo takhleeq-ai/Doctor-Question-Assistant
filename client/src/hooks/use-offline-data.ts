@@ -16,6 +16,8 @@ import {
   getRemindersLocal,
   addLocalItem,
   deleteLocalItem,
+  getLastSyncTime,
+  setLastSyncTime,
 } from "@/lib/offline-storage";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -34,16 +36,23 @@ export function useOfflineSync() {
   const online = useOnlineStatus();
   const [syncing, setSyncing] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [lastSync, setLastSync] = useState<number | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const syncPendingItems = useCallback(async () => {
     if (!online || syncing) return;
 
     setSyncing(true);
+    let successCount = 0;
+    let failCount = 0;
+
     try {
       const pending = await getPendingSync();
       setPendingCount(pending.length);
 
-      for (const item of pending) {
+      const sortedPending = [...pending].sort((a, b) => a.timestamp - b.timestamp);
+
+      for (const item of sortedPending) {
         try {
           const endpoint = `/api/${item.type}s`;
           
@@ -54,8 +63,10 @@ export function useOfflineSync() {
           }
           
           await clearPendingSync(item.id);
+          successCount++;
         } catch (error) {
           console.error("Failed to sync item:", item, error);
+          failCount++;
         }
       }
 
@@ -66,10 +77,40 @@ export function useOfflineSync() {
 
       const updatedPending = await getPendingSync();
       setPendingCount(updatedPending.length);
+
+      const now = Date.now();
+      const status = failCount === 0 ? "success" : successCount > 0 ? "partial" : "failed";
+      await setLastSyncTime(now, status);
+      setLastSync(now);
     } finally {
       setSyncing(false);
     }
   }, [online, syncing, queryClient]);
+
+  const refreshFromServer = useCallback(async () => {
+    if (!online || refreshing) return;
+
+    setRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/symptoms"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/readings"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/reminders"] });
+
+      await queryClient.refetchQueries({ queryKey: ["/api/appointments"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/symptoms"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/readings"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/reminders"] });
+
+      const now = Date.now();
+      await setLastSyncTime(now, "success");
+      setLastSync(now);
+    } catch (error) {
+      console.error("Failed to refresh from server:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [online, refreshing, queryClient]);
 
   useEffect(() => {
     if (online) {
@@ -79,9 +120,17 @@ export function useOfflineSync() {
 
   useEffect(() => {
     getPendingSync().then((pending) => setPendingCount(pending.length));
+    getLastSyncTime().then((time) => setLastSync(time));
   }, []);
 
-  return { syncing, pendingCount, syncNow: syncPendingItems };
+  return { 
+    syncing, 
+    pendingCount, 
+    lastSync,
+    refreshing,
+    syncNow: syncPendingItems,
+    refreshFromServer,
+  };
 }
 
 export function useOfflineAppointments() {
