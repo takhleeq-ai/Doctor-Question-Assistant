@@ -11,11 +11,14 @@ import {
   Sparkles,
   ArrowRight,
   Heart,
-  CheckCircle2
+  CheckCircle2,
+  Download,
+  Smartphone
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { usePwaInstall } from "@/hooks/use-pwa-install";
 
 const features = [
   {
@@ -69,8 +72,14 @@ const benefits = [
 ];
 
 export default function Landing() {
+  const { isInstallable, isInstalled, install } = usePwaInstall();
+
   const handleLogin = () => {
     window.location.href = "/api/login";
+  };
+
+  const handleInstall = async () => {
+    await install();
   };
 
   return (
@@ -83,10 +92,18 @@ export default function Landing() {
             </div>
             <span className="font-bold text-xl">HealthPrep</span>
           </div>
-          <Button onClick={handleLogin} data-testid="button-login-header">
-            Sign In
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            {isInstallable && !isInstalled && (
+              <Button variant="outline" onClick={handleInstall} data-testid="button-install-header">
+                <Download className="mr-2 h-4 w-4" />
+                Install App
+              </Button>
+            )}
+            <Button onClick={handleLogin} data-testid="button-login-header">
+              Sign In
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -111,10 +128,24 @@ export default function Landing() {
                 Get Started Free
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-              <Button size="lg" variant="outline" onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })} data-testid="button-learn-more">
-                Learn More
-              </Button>
+              {isInstallable && !isInstalled && (
+                <Button size="lg" variant="outline" onClick={handleInstall} data-testid="button-install-hero">
+                  <Smartphone className="mr-2 h-4 w-4" />
+                  Install App
+                </Button>
+              )}
+              {!isInstallable && (
+                <Button size="lg" variant="outline" onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })} data-testid="button-learn-more">
+                  Learn More
+                </Button>
+              )}
             </div>
+            {isInstalled && (
+              <p className="text-sm text-muted-foreground flex items-center justify-center gap-1">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                App installed on your device
+              </p>
+            )}
           </div>
         </div>
       </section>
