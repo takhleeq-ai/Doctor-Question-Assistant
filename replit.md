@@ -7,6 +7,9 @@ HealthPrep is a comprehensive health tracking Progressive Web Application (PWA) 
 The MVP is fully implemented with all core features functional.
 
 ## Features
+- **User Authentication**: Passkey-based authentication via Replit Auth (OpenID Connect) - supports Google, GitHub, Apple, email/password
+- **User Profile**: View account info and manage healthcare providers
+- **Healthcare Providers**: Store contact info for GP, Dentist, Specialist, Optometrist, Physiotherapist, Psychiatrist, and other providers
 - **Questions Generator**: AI-powered generation of structured questions to ask doctors, with red flags identification
 - **Appointments Manager**: Schedule and manage doctor appointments with reminder settings
 - **Symptom Tracker**: Log symptoms with severity ratings (1-10 scale)
@@ -40,12 +43,17 @@ shared/
 ```
 
 ## API Endpoints
+- `GET /api/auth/user` - Get current user info
+- `GET /api/login` - Initiate login flow
+- `GET /api/logout` - Logout user
 - `GET/POST /api/appointments` - Manage appointments
 - `GET/POST /api/symptoms` - Track symptoms
 - `GET/POST /api/readings` - Log health readings
 - `GET/POST /api/reminders` - Configure reminders
 - `POST /api/questions/generate` - Generate AI questions
 - `GET /api/questions` - Retrieve saved question sets
+- `GET/POST /api/providers` - Manage healthcare providers (protected)
+- `PATCH/DELETE /api/providers/:id` - Update/delete providers (protected)
 
 ## Design
 - Healthcare-themed teal/blue color palette
