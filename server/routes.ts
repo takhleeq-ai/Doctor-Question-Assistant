@@ -1,8 +1,9 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import OpenAI from "openai";
 import { z } from "zod";
+import validator from "validator";
 import { 
   insertAppointmentSchema,
   insertSymptomSchema,
@@ -17,30 +18,68 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
+// Security helper: Validate and parse numeric ID from params
+function parseId(idString: string): number | null {
+  const id = parseInt(idString, 10);
+  if (isNaN(id) || id <= 0 || id > Number.MAX_SAFE_INTEGER) {
+    return null;
+  }
+  return id;
+}
+
+// Security helper: Validate email format
+function isValidEmail(email: string): boolean {
+  return validator.isEmail(email) && email.length <= 254;
+}
+
+// Security helper: Sanitize string input (prevent XSS in stored data)
+function sanitizeString(str: string | null | undefined): string | null {
+  if (!str) return null;
+  return validator.escape(str.trim()).slice(0, 10000); // Limit length
+}
+
+// Security middleware: Validate ID parameter
+function validateIdParam(req: Request, res: Response, next: NextFunction) {
+  const id = parseId(req.params.id);
+  if (id === null) {
+    return res.status(400).json({ error: "Invalid ID parameter" });
+  }
+  (req as any).validatedId = id;
+  next();
+}
+
 const generateQuestionsSchema = z.object({
-  condition: z.string().min(1),
-  symptoms: z.string().min(1),
-  medications: z.string().optional(),
-  appointmentId: z.string().optional(),
+  condition: z.string().min(1).max(500),
+  symptoms: z.string().min(1).max(2000),
+  medications: z.string().max(1000).optional(),
+  appointmentId: z.string().max(20).optional(),
 });
 
 // Patient profile input schema with proper date handling
 // Strips userId and isDefault from client input for security
 const patientProfileInputSchema = z.object({
-  name: z.string().min(1),
-  relationship: z.string().min(1),
+  name: z.string().min(1).max(100),
+  relationship: z.string().min(1).max(50),
   dateOfBirth: z.string().optional().nullable().transform(val => {
     if (!val || val === "") return null;
-    return new Date(val);
+    const date = new Date(val);
+    if (isNaN(date.getTime())) return null;
+    return date;
   }),
-  gender: z.string().optional().nullable(),
-  bloodType: z.string().optional().nullable(),
-  allergies: z.string().optional().nullable(),
-  conditions: z.string().optional().nullable(),
-  medications: z.string().optional().nullable(),
-  emergencyContact: z.string().optional().nullable(),
-  emergencyPhone: z.string().optional().nullable(),
-  notes: z.string().optional().nullable(),
+  gender: z.string().max(50).optional().nullable(),
+  bloodType: z.string().max(10).optional().nullable(),
+  allergies: z.string().max(2000).optional().nullable(),
+  conditions: z.string().max(2000).optional().nullable(),
+  medications: z.string().max(2000).optional().nullable(),
+  emergencyContact: z.string().max(100).optional().nullable(),
+  emergencyPhone: z.string().max(20).optional().nullable(),
+  notes: z.string().max(5000).optional().nullable(),
+});
+
+// Email export schema with validation
+const emailExportSchema = z.object({
+  email: z.string().email().max(254),
+  report: z.string().min(1).max(100000),
 });
 
 export async function registerRoutes(
@@ -64,9 +103,9 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/patient-profiles/:id", isAuthenticated, async (req: any, res) => {
+  app.get("/api/patient-profiles/:id", isAuthenticated, validateIdParam, async (req: any, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.validatedId;
       const userId = req.user.claims.sub;
       const profile = await storage.getPatientProfile(id, userId);
       if (!profile) {
@@ -93,9 +132,9 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/patient-profiles/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/patient-profiles/:id", isAuthenticated, validateIdParam, async (req: any, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.validatedId;
       const userId = req.user.claims.sub;
       // Parse input, strip userId and isDefault from client for security
       const data = patientProfileInputSchema.partial().parse(req.body);
@@ -110,9 +149,9 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/patient-profiles/:id", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/patient-profiles/:id", isAuthenticated, validateIdParam, async (req: any, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.validatedId;
       const userId = req.user.claims.sub;
       const deleted = await storage.deletePatientProfile(id, userId);
       if (!deleted) {
@@ -125,9 +164,9 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/patient-profiles/:id/set-default", isAuthenticated, async (req: any, res) => {
+  app.post("/api/patient-profiles/:id/set-default", isAuthenticated, validateIdParam, async (req: any, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.validatedId;
       const userId = req.user.claims.sub;
       const profile = await storage.setDefaultPatientProfile(id, userId);
       if (!profile) {
@@ -164,9 +203,9 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/providers/:id", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/providers/:id", isAuthenticated, validateIdParam, async (req: any, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.validatedId;
       const userId = req.user.claims.sub;
       const data = insertHealthcareProviderSchema.partial().parse(req.body);
       const provider = await storage.updateHealthcareProvider(id, userId, data);
@@ -180,9 +219,9 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/providers/:id", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/providers/:id", isAuthenticated, validateIdParam, async (req: any, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.validatedId;
       const userId = req.user.claims.sub;
       const deleted = await storage.deleteHealthcareProvider(id, userId);
       if (!deleted) {
@@ -195,8 +234,8 @@ export async function registerRoutes(
     }
   });
 
-  // Appointments
-  app.get("/api/appointments", async (req, res) => {
+  // Appointments (protected with authentication and ID validation)
+  app.get("/api/appointments", isAuthenticated, async (req: any, res) => {
     try {
       const appointments = await storage.getAppointments();
       res.json(appointments);
@@ -206,9 +245,9 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/appointments/:id", async (req, res) => {
+  app.get("/api/appointments/:id", isAuthenticated, validateIdParam, async (req: any, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.validatedId;
       const appointment = await storage.getAppointment(id);
       if (!appointment) {
         return res.status(404).json({ error: "Appointment not found" });
@@ -220,7 +259,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/appointments", async (req, res) => {
+  app.post("/api/appointments", isAuthenticated, async (req: any, res) => {
     try {
       const data = insertAppointmentSchema.parse(req.body);
       const appointment = await storage.createAppointment(data);
@@ -231,9 +270,9 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/appointments/:id", async (req, res) => {
+  app.patch("/api/appointments/:id", isAuthenticated, validateIdParam, async (req: any, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.validatedId;
       const data = insertAppointmentSchema.partial().parse(req.body);
       const appointment = await storage.updateAppointment(id, data);
       if (!appointment) {
@@ -246,9 +285,9 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/appointments/:id", async (req, res) => {
+  app.delete("/api/appointments/:id", isAuthenticated, validateIdParam, async (req: any, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.validatedId;
       await storage.deleteAppointment(id);
       res.status(204).send();
     } catch (error) {
@@ -257,8 +296,8 @@ export async function registerRoutes(
     }
   });
 
-  // Symptoms
-  app.get("/api/symptoms", async (req, res) => {
+  // Symptoms (protected with authentication and ID validation)
+  app.get("/api/symptoms", isAuthenticated, async (req: any, res) => {
     try {
       const symptoms = await storage.getSymptoms();
       res.json(symptoms);
@@ -268,7 +307,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/symptoms", async (req, res) => {
+  app.post("/api/symptoms", isAuthenticated, async (req: any, res) => {
     try {
       const data = insertSymptomSchema.parse(req.body);
       const symptom = await storage.createSymptom(data);
@@ -279,9 +318,9 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/symptoms/:id", async (req, res) => {
+  app.delete("/api/symptoms/:id", isAuthenticated, validateIdParam, async (req: any, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.validatedId;
       await storage.deleteSymptom(id);
       res.status(204).send();
     } catch (error) {
@@ -290,8 +329,8 @@ export async function registerRoutes(
     }
   });
 
-  // Readings
-  app.get("/api/readings", async (req, res) => {
+  // Readings (protected with authentication and ID validation)
+  app.get("/api/readings", isAuthenticated, async (req: any, res) => {
     try {
       const readings = await storage.getReadings();
       res.json(readings);
@@ -301,7 +340,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/readings", async (req, res) => {
+  app.post("/api/readings", isAuthenticated, async (req: any, res) => {
     try {
       const data = insertReadingSchema.parse(req.body);
       const reading = await storage.createReading(data);
@@ -312,9 +351,9 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/readings/:id", async (req, res) => {
+  app.delete("/api/readings/:id", isAuthenticated, validateIdParam, async (req: any, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.validatedId;
       await storage.deleteReading(id);
       res.status(204).send();
     } catch (error) {
@@ -323,8 +362,8 @@ export async function registerRoutes(
     }
   });
 
-  // Reminders
-  app.get("/api/reminders", async (req, res) => {
+  // Reminders (protected with authentication and ID validation)
+  app.get("/api/reminders", isAuthenticated, async (req: any, res) => {
     try {
       const reminders = await storage.getReminders();
       res.json(reminders);
@@ -334,7 +373,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/reminders", async (req, res) => {
+  app.post("/api/reminders", isAuthenticated, async (req: any, res) => {
     try {
       const data = insertReminderSchema.parse(req.body);
       const reminder = await storage.createReminder(data);
@@ -345,9 +384,9 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/reminders/:id", async (req, res) => {
+  app.patch("/api/reminders/:id", isAuthenticated, validateIdParam, async (req: any, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.validatedId;
       const data = insertReminderSchema.partial().parse(req.body);
       const reminder = await storage.updateReminder(id, data);
       if (!reminder) {
@@ -360,9 +399,9 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/reminders/:id", async (req, res) => {
+  app.delete("/api/reminders/:id", isAuthenticated, validateIdParam, async (req: any, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.validatedId;
       await storage.deleteReminder(id);
       res.status(204).send();
     } catch (error) {
@@ -371,8 +410,8 @@ export async function registerRoutes(
     }
   });
 
-  // Question Sets
-  app.get("/api/questions", async (req, res) => {
+  // Question Sets (protected)
+  app.get("/api/questions", isAuthenticated, async (req: any, res) => {
     try {
       const questionSets = await storage.getQuestionSets();
       res.json(questionSets);
@@ -382,7 +421,7 @@ export async function registerRoutes(
     }
   });
 
-  // Nearby Services using OpenStreetMap Overpass API
+  // Nearby Services using OpenStreetMap Overpass API (public but with validation)
   app.get("/api/nearby", async (req, res) => {
     try {
       const { type, lat, lon } = req.query;
@@ -391,8 +430,22 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Missing required parameters: type, lat, lon" });
       }
 
+      // Validate service type (whitelist allowed values)
+      const allowedTypes = ["pharmacy", "gp", "dentist", "hospital"];
+      if (!allowedTypes.includes(type as string)) {
+        return res.status(400).json({ error: "Invalid service type" });
+      }
+
       const latitude = parseFloat(lat as string);
       const longitude = parseFloat(lon as string);
+
+      // Validate coordinate ranges
+      if (isNaN(latitude) || isNaN(longitude) || 
+          latitude < -90 || latitude > 90 || 
+          longitude < -180 || longitude > 180) {
+        return res.status(400).json({ error: "Invalid coordinates" });
+      }
+
       const radius = 10000; // 10km radius
 
       // Map our service types to OSM amenity/healthcare tags (include nodes, ways, and relations)
@@ -507,8 +560,8 @@ export async function registerRoutes(
     }
   });
 
-  // Generate Questions using AI
-  app.post("/api/questions/generate", async (req, res) => {
+  // Generate Questions using AI (protected)
+  app.post("/api/questions/generate", isAuthenticated, async (req: any, res) => {
     try {
       const { condition, symptoms, medications, appointmentId } = generateQuestionsSchema.parse(req.body);
 
@@ -585,13 +638,20 @@ Generate comprehensive but focused questions I should ask my doctor, organized b
     }
   });
 
-  // Export/Share - Email endpoint
+  // Export/Share - Email endpoint (protected with strict validation)
   app.post("/api/export/email", isAuthenticated, async (req: any, res) => {
     try {
-      const { email, report } = req.body;
-      
-      if (!email || !report) {
-        return res.status(400).json({ error: "Email and report are required" });
+      // Validate input with schema
+      const validatedData = emailExportSchema.safeParse(req.body);
+      if (!validatedData.success) {
+        return res.status(400).json({ error: "Invalid email or report data" });
+      }
+
+      const { email, report } = validatedData.data;
+
+      // Additional email validation
+      if (!isValidEmail(email)) {
+        return res.status(400).json({ error: "Invalid email address format" });
       }
 
       // Check if SendGrid is configured
@@ -600,9 +660,12 @@ Generate comprehensive but focused questions I should ask my doctor, organized b
       
       if (!sendgridApiKey) {
         return res.status(503).json({ 
-          error: "Email service not configured. Please set up SendGrid integration to enable email sharing." 
+          error: "Email service not configured" 
         });
       }
+
+      // Sanitize report content before sending
+      const sanitizedReport = report.slice(0, 100000); // Enforce max length
 
       // Send email via SendGrid
       const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
@@ -618,16 +681,15 @@ Generate comprehensive but focused questions I should ask my doctor, organized b
           content: [
             {
               type: "text/plain",
-              value: report,
+              value: sanitizedReport,
             },
           ],
         }),
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("SendGrid error:", errorText);
-        throw new Error("Failed to send email");
+        console.error("SendGrid error");
+        throw new Error("Email service error");
       }
 
       res.json({ success: true, message: "Email sent successfully" });
