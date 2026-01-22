@@ -81,8 +81,25 @@ function AppContent() {
   useEffect(() => {
     if (!isAuthenticated) return;
 
+    let hiddenTimeout: NodeJS.Timeout | null = null;
+
     const handleAutoLogout = () => {
       logout();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        // Start 1 minute timeout when app is hidden
+        hiddenTimeout = setTimeout(() => {
+          handleAutoLogout();
+        }, 60000);
+      } else {
+        // Clear timeout if app becomes visible again
+        if (hiddenTimeout) {
+          clearTimeout(hiddenTimeout);
+          hiddenTimeout = null;
+        }
+      }
     };
 
     const handleOnlineStatus = () => {
@@ -92,10 +109,13 @@ function AppContent() {
     };
 
     window.addEventListener("pagehide", handleAutoLogout);
+    window.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("offline", handleOnlineStatus);
 
     return () => {
+      if (hiddenTimeout) clearTimeout(hiddenTimeout);
       window.removeEventListener("pagehide", handleAutoLogout);
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("offline", handleOnlineStatus);
     };
   }, [isAuthenticated, logout]);
