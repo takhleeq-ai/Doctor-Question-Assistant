@@ -18,7 +18,7 @@ The MVP is fully implemented with all core features functional.
 - **Timeline View**: Chronological view of all health data
 - **Reminders**: Customizable periodic reminders for logging readings (hourly to weekly intervals)
 - **Nearby Services**: Find pharmacies, GPs, dentists, and A&E/hospitals near you using device location or manual address entry
-- **PWA Support**: Installable web app with offline-capable manifest
+- **PWA Support**: Installable web app with service worker for offline functionality
 
 ## Tech Stack
 - **Frontend**: React, TypeScript, Tailwind CSS, Shadcn UI, TanStack Query
