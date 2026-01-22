@@ -67,12 +67,20 @@ shared/
 - Dark mode support
 - Accessible components using Shadcn UI
 
+## Security Notes
+- Patient profile API uses a custom input schema (`patientProfileInputSchema`) that:
+  - Strips `userId` from client input (injected server-side from auth)
+  - Strips `isDefault` from create/update (only changeable via set-default endpoint)
+  - Coerces date strings to Date objects for proper validation
+- All patient profile and healthcare provider routes are protected with `isAuthenticated` middleware
+
 ## Recent Changes
 - January 22, 2026: Added patient profiles feature
   - Multiple patient profiles per user account (self, children, spouse, parents, etc.)
   - Profile management UI in the profile page with tabs
   - Patient profile selector in app header for switching between profiles
   - Stores medical information: allergies, conditions, medications, blood type, emergency contacts
+  - Secure date handling and authorization (userId/isDefault cannot be set by client)
   
 - January 22, 2026: Initial MVP implementation
   - Complete frontend with all pages
