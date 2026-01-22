@@ -63,6 +63,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Appointment } from "@shared/schema";
@@ -647,27 +653,27 @@ export default function Appointments() {
               )}
             </TabsContent>
           </Tabs>
+        )
+      )}
 
-          {(!appointments || appointments.length === 0) && (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <Calendar className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="font-medium text-muted-foreground">No appointments scheduled</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Add your first appointment to get started
-                </p>
-                <Button 
-                  className="mt-4" 
-                  onClick={() => setDialogOpen(true)}
-                  data-testid="button-add-first-appointment"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Appointment
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+      {(!appointments || appointments.length === 0) && (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <Calendar className="h-12 w-12 text-muted-foreground/50 mb-4" />
+            <h3 className="font-medium text-muted-foreground">No appointments scheduled</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Add your first appointment to get started
+            </p>
+            <Button 
+              className="mt-4" 
+              onClick={() => setDialogOpen(true)}
+              data-testid="button-add-first-appointment"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Appointment
+            </Button>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
