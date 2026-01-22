@@ -1,4 +1,4 @@
-const CACHE_NAME = 'healthprep-v2';
+const CACHE_NAME = 'healthprep-v3';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
