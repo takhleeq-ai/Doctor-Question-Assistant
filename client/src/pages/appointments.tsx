@@ -71,6 +71,8 @@ import {
 } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useOfflineAppointments } from "@/hooks/use-offline-data";
+import { useEffect } from "react";
 import type { Appointment } from "@shared/schema";
 
 const formSchema = z.object({
@@ -494,9 +496,17 @@ export default function Appointments() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
 
+  const { online, cacheAppointments } = useOfflineAppointments();
+
   const { data: appointments, isLoading } = useQuery<Appointment[]>({
     queryKey: ["/api/appointments"],
   });
+
+  useEffect(() => {
+    if (appointments) {
+      cacheAppointments(appointments);
+    }
+  }, [appointments, cacheAppointments]);
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
