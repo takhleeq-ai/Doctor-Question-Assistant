@@ -19,7 +19,8 @@ const openai = new OpenAI({
 });
 
 // Security helper: Validate and parse numeric ID from params
-function parseId(idString: string): number | null {
+function parseId(idString: string | string[] | undefined): number | null {
+  if (!idString || Array.isArray(idString)) return null;
   const id = parseInt(idString, 10);
   if (isNaN(id) || id <= 0 || id > Number.MAX_SAFE_INTEGER) {
     return null;
