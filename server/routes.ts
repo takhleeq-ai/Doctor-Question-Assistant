@@ -275,6 +275,103 @@ export async function registerRoutes(
     }
   });
 
+  // Nearby Services using OpenStreetMap Overpass API
+  app.get("/api/nearby", async (req, res) => {
+    try {
+      const { type, lat, lon } = req.query;
+      
+      if (!type || !lat || !lon) {
+        return res.status(400).json({ error: "Missing required parameters: type, lat, lon" });
+      }
+
+      const latitude = parseFloat(lat as string);
+      const longitude = parseFloat(lon as string);
+      const radius = 10000; // 10km radius
+
+      // Map our service types to OSM amenity/healthcare tags
+      let osmQuery = "";
+      switch (type) {
+        case "pharmacy":
+          osmQuery = `node["amenity"="pharmacy"](around:${radius},${latitude},${longitude});`;
+          break;
+        case "gp":
+          osmQuery = `
+            node["amenity"="doctors"](around:${radius},${latitude},${longitude});
+            node["healthcare"="doctor"](around:${radius},${latitude},${longitude});
+            node["healthcare"="clinic"](around:${radius},${latitude},${longitude});
+          `;
+          break;
+        case "dentist":
+          osmQuery = `
+            node["amenity"="dentist"](around:${radius},${latitude},${longitude});
+            node["healthcare"="dentist"](around:${radius},${latitude},${longitude});
+          `;
+          break;
+        case "hospital":
+          osmQuery = `
+            node["amenity"="hospital"](around:${radius},${latitude},${longitude});
+            way["amenity"="hospital"](around:${radius},${latitude},${longitude});
+            node["healthcare"="hospital"](around:${radius},${latitude},${longitude});
+            node["emergency"="yes"](around:${radius},${latitude},${longitude});
+          `;
+          break;
+        default:
+          return res.status(400).json({ error: "Invalid service type" });
+      }
+
+      const overpassQuery = `
+        [out:json][timeout:25];
+        (
+          ${osmQuery}
+        );
+        out body center;
+      `;
+
+      const overpassUrl = "https://overpass-api.de/api/interpreter";
+      const response = await fetch(overpassUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: `data=${encodeURIComponent(overpassQuery)}`,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Overpass API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Transform OSM data to our format
+      const places = data.elements
+        .filter((el: any) => el.tags?.name)
+        .map((el: any) => ({
+          id: el.id.toString(),
+          name: el.tags?.name || "Unknown",
+          type: type,
+          lat: el.lat || el.center?.lat,
+          lon: el.lon || el.center?.lon,
+          address: [
+            el.tags?.["addr:housenumber"],
+            el.tags?.["addr:street"],
+            el.tags?.["addr:city"],
+            el.tags?.["addr:postcode"],
+          ]
+            .filter(Boolean)
+            .join(", ") || undefined,
+          phone: el.tags?.phone || el.tags?.["contact:phone"] || undefined,
+          openingHours: el.tags?.opening_hours || undefined,
+          website: el.tags?.website || el.tags?.["contact:website"] || undefined,
+        }))
+        .slice(0, 20); // Limit to 20 results
+
+      res.json(places);
+    } catch (error) {
+      console.error("Error fetching nearby services:", error);
+      res.status(500).json({ error: "Failed to fetch nearby services" });
+    }
+  });
+
   // Generate Questions using AI
   app.post("/api/questions/generate", async (req, res) => {
     try {

@@ -11,6 +11,7 @@ import {
   User,
   LogIn,
   Loader2,
+  MapPin,
 } from "lucide-react";
 import {
   Sidebar,
@@ -64,6 +65,12 @@ const mainNavItems = [
     url: "/reminders",
     icon: Bell,
     description: "Set up reading reminders",
+  },
+  {
+    title: "Nearby Services",
+    url: "/nearby",
+    icon: MapPin,
+    description: "Find pharmacies, doctors, hospitals",
   },
 ];
 

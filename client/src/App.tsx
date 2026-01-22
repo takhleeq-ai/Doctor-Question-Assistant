@@ -15,6 +15,7 @@ import Readings from "@/pages/readings";
 import Timeline from "@/pages/timeline";
 import Reminders from "@/pages/reminders";
 import Profile from "@/pages/profile";
+import NearbyServices from "@/pages/nearby-services";
 
 function Router() {
   return (
@@ -25,6 +26,7 @@ function Router() {
       <Route path="/readings" component={Readings} />
       <Route path="/timeline" component={Timeline} />
       <Route path="/reminders" component={Reminders} />
+      <Route path="/nearby" component={NearbyServices} />
       <Route path="/profile" component={Profile} />
       <Route component={NotFound} />
     </Switch>
