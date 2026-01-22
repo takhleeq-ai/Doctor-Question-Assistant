@@ -1,19 +1,20 @@
 import { 
-  users, type User, type InsertUser,
   appointments, type Appointment, type InsertAppointment,
   questionSets, type QuestionSet, type InsertQuestionSet,
   symptoms, type Symptom, type InsertSymptom,
   readings, type Reading, type InsertReading,
   reminders, type Reminder, type InsertReminder,
+  healthcareProviders, type HealthcareProvider, type InsertHealthcareProvider,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
-  // Users
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  // Healthcare Providers
+  getHealthcareProviders(userId: string): Promise<HealthcareProvider[]>;
+  createHealthcareProvider(data: InsertHealthcareProvider): Promise<HealthcareProvider>;
+  updateHealthcareProvider(id: number, userId: string, data: Partial<InsertHealthcareProvider>): Promise<HealthcareProvider | undefined>;
+  deleteHealthcareProvider(id: number, userId: string): Promise<boolean>;
   
   // Appointments
   getAppointments(): Promise<Appointment[]>;
@@ -48,20 +49,31 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  // Users
-  async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
+  // Healthcare Providers
+  async getHealthcareProviders(userId: string): Promise<HealthcareProvider[]> {
+    return db.select().from(healthcareProviders)
+      .where(eq(healthcareProviders.userId, userId))
+      .orderBy(desc(healthcareProviders.createdAt));
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user || undefined;
+  async createHealthcareProvider(data: InsertHealthcareProvider): Promise<HealthcareProvider> {
+    const [provider] = await db.insert(healthcareProviders).values(data).returning();
+    return provider;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
-    return user;
+  async updateHealthcareProvider(id: number, userId: string, data: Partial<InsertHealthcareProvider>): Promise<HealthcareProvider | undefined> {
+    const [provider] = await db.update(healthcareProviders)
+      .set(data)
+      .where(and(eq(healthcareProviders.id, id), eq(healthcareProviders.userId, userId)))
+      .returning();
+    return provider || undefined;
+  }
+
+  async deleteHealthcareProvider(id: number, userId: string): Promise<boolean> {
+    const result = await db.delete(healthcareProviders)
+      .where(and(eq(healthcareProviders.id, id), eq(healthcareProviders.userId, userId)))
+      .returning();
+    return result.length > 0;
   }
   
   // Appointments

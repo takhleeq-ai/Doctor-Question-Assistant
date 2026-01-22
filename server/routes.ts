@@ -8,7 +8,9 @@ import {
   insertSymptomSchema,
   insertReadingSchema,
   insertReminderSchema,
+  insertHealthcareProviderSchema,
 } from "@shared/schema";
+import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -27,6 +29,65 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   
+  // Setup authentication first
+  await setupAuth(app);
+  registerAuthRoutes(app);
+
+  // Healthcare Providers (protected routes)
+  app.get("/api/providers", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const providers = await storage.getHealthcareProviders(userId);
+      res.json(providers);
+    } catch (error) {
+      console.error("Error fetching providers:", error);
+      res.status(500).json({ error: "Failed to fetch providers" });
+    }
+  });
+
+  app.post("/api/providers", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const data = insertHealthcareProviderSchema.parse({ ...req.body, userId });
+      const provider = await storage.createHealthcareProvider(data);
+      res.status(201).json(provider);
+    } catch (error) {
+      console.error("Error creating provider:", error);
+      res.status(400).json({ error: "Invalid provider data" });
+    }
+  });
+
+  app.patch("/api/providers/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      const data = insertHealthcareProviderSchema.partial().parse(req.body);
+      const provider = await storage.updateHealthcareProvider(id, userId, data);
+      if (!provider) {
+        return res.status(404).json({ error: "Provider not found" });
+      }
+      res.json(provider);
+    } catch (error) {
+      console.error("Error updating provider:", error);
+      res.status(400).json({ error: "Invalid provider data" });
+    }
+  });
+
+  app.delete("/api/providers/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      const deleted = await storage.deleteHealthcareProvider(id, userId);
+      if (!deleted) {
+        return res.status(404).json({ error: "Provider not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting provider:", error);
+      res.status(500).json({ error: "Failed to delete provider" });
+    }
+  });
+
   // Appointments
   app.get("/api/appointments", async (req, res) => {
     try {

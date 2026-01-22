@@ -4,20 +4,39 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 
-// Users table
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+// Re-export auth models (users and sessions tables)
+export * from "./models/auth";
+import { users } from "./models/auth";
+
+// Healthcare Providers table (GP, Dentist, Specialist, etc.)
+export const healthcareProviders = pgTable("healthcare_providers", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  name: text("name").notNull(),
+  specialty: text("specialty"),
+  practice: text("practice"),
+  phone: text("phone"),
+  email: text("email"),
+  address: text("address"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const healthcareProvidersRelations = relations(healthcareProviders, ({ one }) => ({
+  user: one(users, {
+    fields: [healthcareProviders.userId],
+    references: [users.id],
+  }),
+}));
+
+export const insertHealthcareProviderSchema = createInsertSchema(healthcareProviders).omit({
+  id: true,
+  createdAt: true,
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+export type HealthcareProvider = typeof healthcareProviders.$inferSelect;
+export type InsertHealthcareProvider = z.infer<typeof insertHealthcareProviderSchema>;
 
 // Appointments table
 export const appointments = pgTable("appointments", {
