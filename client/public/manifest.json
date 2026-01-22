@@ -1,0 +1,19 @@
+{
+  "name": "HealthPrep - Questions for My Doctor",
+  "short_name": "HealthPrep",
+  "description": "Prepare thoughtful questions for your doctor visits, track symptoms and health readings",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0d9488",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["health", "medical", "lifestyle"]
+}
