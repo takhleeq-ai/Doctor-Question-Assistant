@@ -9,7 +9,6 @@ import {
   insertReadingSchema,
   insertReminderSchema,
   insertHealthcareProviderSchema,
-  insertPatientProfileSchema,
 } from "@shared/schema";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 
@@ -23,6 +22,25 @@ const generateQuestionsSchema = z.object({
   symptoms: z.string().min(1),
   medications: z.string().optional(),
   appointmentId: z.string().optional(),
+});
+
+// Patient profile input schema with proper date handling
+// Strips userId and isDefault from client input for security
+const patientProfileInputSchema = z.object({
+  name: z.string().min(1),
+  relationship: z.string().min(1),
+  dateOfBirth: z.string().optional().nullable().transform(val => {
+    if (!val || val === "") return null;
+    return new Date(val);
+  }),
+  gender: z.string().optional().nullable(),
+  bloodType: z.string().optional().nullable(),
+  allergies: z.string().optional().nullable(),
+  conditions: z.string().optional().nullable(),
+  medications: z.string().optional().nullable(),
+  emergencyContact: z.string().optional().nullable(),
+  emergencyPhone: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
 });
 
 export async function registerRoutes(
@@ -64,7 +82,9 @@ export async function registerRoutes(
   app.post("/api/patient-profiles", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const data = insertPatientProfileSchema.parse({ ...req.body, userId });
+      // Parse input, strip userId and isDefault from client for security
+      const inputData = patientProfileInputSchema.parse(req.body);
+      const data = { ...inputData, userId, isDefault: false };
       const profile = await storage.createPatientProfile(data);
       res.status(201).json(profile);
     } catch (error) {
@@ -77,7 +97,8 @@ export async function registerRoutes(
     try {
       const id = parseInt(req.params.id);
       const userId = req.user.claims.sub;
-      const data = insertPatientProfileSchema.partial().parse(req.body);
+      // Parse input, strip userId and isDefault from client for security
+      const data = patientProfileInputSchema.partial().parse(req.body);
       const profile = await storage.updatePatientProfile(id, userId, data);
       if (!profile) {
         return res.status(404).json({ error: "Patient profile not found" });

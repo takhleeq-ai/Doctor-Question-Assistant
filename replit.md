@@ -8,7 +8,8 @@ The MVP is fully implemented with all core features functional.
 
 ## Features
 - **User Authentication**: Passkey-based authentication via Replit Auth (OpenID Connect) - supports Google, GitHub, Apple, email/password
-- **User Profile**: View account info and manage healthcare providers
+- **User Profile**: View account info, manage patient profiles, and healthcare providers
+- **Patient Profiles**: Manage multiple patient profiles (self, children, spouse, parents) with medical history, allergies, medications, and emergency contacts
 - **Healthcare Providers**: Store contact info for GP, Dentist, Specialist, Optometrist, Physiotherapist, Psychiatrist, and other providers
 - **Questions Generator**: AI-powered generation of structured questions to ask doctors, with red flags identification
 - **Appointments Manager**: Schedule and manage doctor appointments with reminder settings
@@ -56,6 +57,9 @@ shared/
 - `GET/POST /api/providers` - Manage healthcare providers (protected)
 - `PATCH/DELETE /api/providers/:id` - Update/delete providers (protected)
 - `GET /api/nearby` - Find nearby pharmacies, GPs, dentists, hospitals (uses OpenStreetMap)
+- `GET/POST /api/patient-profiles` - Manage patient profiles (protected)
+- `GET/PATCH/DELETE /api/patient-profiles/:id` - Individual profile operations (protected)
+- `POST /api/patient-profiles/:id/set-default` - Set default patient profile (protected)
 
 ## Design
 - Healthcare-themed teal/blue color palette
@@ -64,6 +68,12 @@ shared/
 - Accessible components using Shadcn UI
 
 ## Recent Changes
+- January 22, 2026: Added patient profiles feature
+  - Multiple patient profiles per user account (self, children, spouse, parents, etc.)
+  - Profile management UI in the profile page with tabs
+  - Patient profile selector in app header for switching between profiles
+  - Stores medical information: allergies, conditions, medications, blood type, emergency contacts
+  
 - January 22, 2026: Initial MVP implementation
   - Complete frontend with all pages
   - Backend API with PostgreSQL storage
