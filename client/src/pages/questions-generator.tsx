@@ -82,7 +82,7 @@ export default function QuestionsGenerator() {
         appointmentId: data.appointmentId && data.appointmentId !== "none" ? data.appointmentId : undefined,
       };
       const response = await apiRequest("POST", "/api/questions/generate", sanitizedData);
-      return response as GeneratedQuestions;
+      return await response.json() as GeneratedQuestions;
     },
     onSuccess: (data) => {
       setGeneratedData(data);
@@ -109,7 +109,7 @@ export default function QuestionsGenerator() {
     }
     content += "\n";
 
-    if (generatedData.redFlags.length > 0) {
+    if (generatedData.redFlags && generatedData.redFlags.length > 0) {
       content += "RED FLAGS TO MENTION IMMEDIATELY\n";
       content += "--------------------------------\n";
       generatedData.redFlags.forEach((flag) => {
@@ -312,7 +312,7 @@ export default function QuestionsGenerator() {
 
           {generatedData && !generateMutation.isPending && (
             <>
-              {generatedData.redFlags.length > 0 && (
+              {generatedData.redFlags && generatedData.redFlags.length > 0 && (
                 <Card className="border-destructive/50 bg-destructive/5">
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-destructive">
