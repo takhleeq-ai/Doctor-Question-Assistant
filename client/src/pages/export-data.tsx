@@ -129,6 +129,19 @@ export default function ExportData() {
   const emailMutation = useMutation({
     mutationFn: async (data: { email: string; report: string }) => {
       const response = await apiRequest("POST", "/api/export/email", data);
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Please sign in to share your health report");
+        } else if (response.status === 503) {
+          throw new Error("Email service is not available. Please download the report instead");
+        } else if (response.status === 400) {
+          throw new Error("Please enter a valid email address");
+        } else if (response.status === 429) {
+          throw new Error("Too many requests. Please wait a moment and try again");
+        } else {
+          throw new Error("Unable to send email. Please try downloading the report instead");
+        }
+      }
       return response;
     },
     onSuccess: () => {
@@ -140,7 +153,7 @@ export default function ExportData() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to send email",
+        title: "Unable to send email",
         description: error.message || "Please check your email address and try again.",
         variant: "destructive",
       });

@@ -82,6 +82,15 @@ export default function QuestionsGenerator() {
         appointmentId: data.appointmentId && data.appointmentId !== "none" ? data.appointmentId : undefined,
       };
       const response = await apiRequest("POST", "/api/questions/generate", sanitizedData);
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Please sign in to generate questions");
+        } else if (response.status === 429) {
+          throw new Error("Too many requests. Please wait a moment and try again");
+        } else {
+          throw new Error("Unable to generate questions. Please try again later");
+        }
+      }
       return await response.json() as GeneratedQuestions;
     },
     onSuccess: (data) => {
@@ -304,8 +313,14 @@ export default function QuestionsGenerator() {
             <Card className="border-destructive">
               <CardContent className="flex flex-col items-center justify-center py-8">
                 <AlertCircle className="h-8 w-8 text-destructive mb-4" />
-                <p className="text-destructive font-medium">Failed to generate questions</p>
-                <p className="text-sm text-muted-foreground mt-1">Please try again</p>
+                <p className="text-destructive font-medium" data-testid="text-error-message">
+                  {generateMutation.error?.message || "Failed to generate questions"}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {generateMutation.error?.message?.includes("sign in") 
+                    ? "Click the login button above to get started"
+                    : "Please try again"}
+                </p>
               </CardContent>
             </Card>
           )}
