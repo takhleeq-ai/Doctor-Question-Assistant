@@ -9,6 +9,7 @@ import {
   insertReadingSchema,
   insertReminderSchema,
   insertHealthcareProviderSchema,
+  insertPatientProfileSchema,
 } from "@shared/schema";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 
@@ -32,6 +33,91 @@ export async function registerRoutes(
   // Setup authentication first
   await setupAuth(app);
   registerAuthRoutes(app);
+
+  // Patient Profiles (protected routes)
+  app.get("/api/patient-profiles", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profiles = await storage.getPatientProfiles(userId);
+      res.json(profiles);
+    } catch (error) {
+      console.error("Error fetching patient profiles:", error);
+      res.status(500).json({ error: "Failed to fetch patient profiles" });
+    }
+  });
+
+  app.get("/api/patient-profiles/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      const profile = await storage.getPatientProfile(id, userId);
+      if (!profile) {
+        return res.status(404).json({ error: "Patient profile not found" });
+      }
+      res.json(profile);
+    } catch (error) {
+      console.error("Error fetching patient profile:", error);
+      res.status(500).json({ error: "Failed to fetch patient profile" });
+    }
+  });
+
+  app.post("/api/patient-profiles", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const data = insertPatientProfileSchema.parse({ ...req.body, userId });
+      const profile = await storage.createPatientProfile(data);
+      res.status(201).json(profile);
+    } catch (error) {
+      console.error("Error creating patient profile:", error);
+      res.status(400).json({ error: "Invalid patient profile data" });
+    }
+  });
+
+  app.patch("/api/patient-profiles/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      const data = insertPatientProfileSchema.partial().parse(req.body);
+      const profile = await storage.updatePatientProfile(id, userId, data);
+      if (!profile) {
+        return res.status(404).json({ error: "Patient profile not found" });
+      }
+      res.json(profile);
+    } catch (error) {
+      console.error("Error updating patient profile:", error);
+      res.status(400).json({ error: "Invalid patient profile data" });
+    }
+  });
+
+  app.delete("/api/patient-profiles/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      const deleted = await storage.deletePatientProfile(id, userId);
+      if (!deleted) {
+        return res.status(404).json({ error: "Patient profile not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting patient profile:", error);
+      res.status(500).json({ error: "Failed to delete patient profile" });
+    }
+  });
+
+  app.post("/api/patient-profiles/:id/set-default", isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      const profile = await storage.setDefaultPatientProfile(id, userId);
+      if (!profile) {
+        return res.status(404).json({ error: "Patient profile not found" });
+      }
+      res.json(profile);
+    } catch (error) {
+      console.error("Error setting default patient profile:", error);
+      res.status(500).json({ error: "Failed to set default patient profile" });
+    }
+  });
 
   // Healthcare Providers (protected routes)
   app.get("/api/providers", isAuthenticated, async (req: any, res) => {

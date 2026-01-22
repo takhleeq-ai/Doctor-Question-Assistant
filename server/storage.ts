@@ -5,11 +5,20 @@ import {
   readings, type Reading, type InsertReading,
   reminders, type Reminder, type InsertReminder,
   healthcareProviders, type HealthcareProvider, type InsertHealthcareProvider,
+  patientProfiles, type PatientProfile, type InsertPatientProfile,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
+  // Patient Profiles
+  getPatientProfiles(userId: string): Promise<PatientProfile[]>;
+  getPatientProfile(id: number, userId: string): Promise<PatientProfile | undefined>;
+  createPatientProfile(data: InsertPatientProfile): Promise<PatientProfile>;
+  updatePatientProfile(id: number, userId: string, data: Partial<InsertPatientProfile>): Promise<PatientProfile | undefined>;
+  deletePatientProfile(id: number, userId: string): Promise<boolean>;
+  setDefaultPatientProfile(id: number, userId: string): Promise<PatientProfile | undefined>;
+  
   // Healthcare Providers
   getHealthcareProviders(userId: string): Promise<HealthcareProvider[]>;
   createHealthcareProvider(data: InsertHealthcareProvider): Promise<HealthcareProvider>;
@@ -49,6 +58,53 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Patient Profiles
+  async getPatientProfiles(userId: string): Promise<PatientProfile[]> {
+    return db.select().from(patientProfiles)
+      .where(eq(patientProfiles.userId, userId))
+      .orderBy(desc(patientProfiles.isDefault), patientProfiles.name);
+  }
+
+  async getPatientProfile(id: number, userId: string): Promise<PatientProfile | undefined> {
+    const [profile] = await db.select().from(patientProfiles)
+      .where(and(eq(patientProfiles.id, id), eq(patientProfiles.userId, userId)));
+    return profile || undefined;
+  }
+
+  async createPatientProfile(data: InsertPatientProfile): Promise<PatientProfile> {
+    const [profile] = await db.insert(patientProfiles).values(data).returning();
+    return profile;
+  }
+
+  async updatePatientProfile(id: number, userId: string, data: Partial<InsertPatientProfile>): Promise<PatientProfile | undefined> {
+    const [profile] = await db.update(patientProfiles)
+      .set(data)
+      .where(and(eq(patientProfiles.id, id), eq(patientProfiles.userId, userId)))
+      .returning();
+    return profile || undefined;
+  }
+
+  async deletePatientProfile(id: number, userId: string): Promise<boolean> {
+    const result = await db.delete(patientProfiles)
+      .where(and(eq(patientProfiles.id, id), eq(patientProfiles.userId, userId)))
+      .returning();
+    return result.length > 0;
+  }
+
+  async setDefaultPatientProfile(id: number, userId: string): Promise<PatientProfile | undefined> {
+    // First unset all defaults for this user
+    await db.update(patientProfiles)
+      .set({ isDefault: false })
+      .where(eq(patientProfiles.userId, userId));
+    
+    // Then set the selected one as default
+    const [profile] = await db.update(patientProfiles)
+      .set({ isDefault: true })
+      .where(and(eq(patientProfiles.id, id), eq(patientProfiles.userId, userId)))
+      .returning();
+    return profile || undefined;
+  }
+  
   // Healthcare Providers
   async getHealthcareProviders(userId: string): Promise<HealthcareProvider[]> {
     return db.select().from(healthcareProviders)

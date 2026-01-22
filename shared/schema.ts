@@ -38,6 +38,40 @@ export const insertHealthcareProviderSchema = createInsertSchema(healthcareProvi
 export type HealthcareProvider = typeof healthcareProviders.$inferSelect;
 export type InsertHealthcareProvider = z.infer<typeof insertHealthcareProviderSchema>;
 
+// Patient Profiles table (for managing multiple patients per user account)
+export const patientProfiles = pgTable("patient_profiles", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  relationship: text("relationship").notNull(), // "self", "child", "spouse", "parent", "other"
+  dateOfBirth: timestamp("date_of_birth"),
+  gender: text("gender"), // "male", "female", "other", "prefer_not_to_say"
+  bloodType: text("blood_type"),
+  allergies: text("allergies"),
+  conditions: text("conditions"),
+  medications: text("medications"),
+  emergencyContact: text("emergency_contact"),
+  emergencyPhone: text("emergency_phone"),
+  notes: text("notes"),
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const patientProfilesRelations = relations(patientProfiles, ({ one }) => ({
+  user: one(users, {
+    fields: [patientProfiles.userId],
+    references: [users.id],
+  }),
+}));
+
+export const insertPatientProfileSchema = createInsertSchema(patientProfiles).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type PatientProfile = typeof patientProfiles.$inferSelect;
+export type InsertPatientProfile = z.infer<typeof insertPatientProfileSchema>;
+
 // Appointments table
 export const appointments = pgTable("appointments", {
   id: serial("id").primaryKey(),
