@@ -615,6 +615,7 @@ export default function Appointments() {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : (
+        appointments && appointments.length > 0 && (
           <Tabs defaultValue="upcoming" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
