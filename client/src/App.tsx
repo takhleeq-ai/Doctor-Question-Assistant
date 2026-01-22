@@ -76,13 +76,13 @@ function AuthenticatedApp() {
 }
 
 function AppContent() {
-  const { isAuthenticated, isLoading, logoutMutation } = useAuth();
+  const { isAuthenticated, isLoading, logout } = useAuth();
 
   useEffect(() => {
     if (!isAuthenticated) return;
 
     const handleAutoLogout = () => {
-      logoutMutation.mutate();
+      logout();
     };
 
     const handleVisibilityChange = () => {
@@ -106,7 +106,7 @@ function AppContent() {
       window.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("offline", handleOnlineStatus);
     };
-  }, [isAuthenticated, logoutMutation]);
+  }, [isAuthenticated, logout]);
 
   if (isLoading) {
     return (
