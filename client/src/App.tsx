@@ -11,6 +11,7 @@ import { PatientProfileProvider } from "@/hooks/use-patient-profile";
 import { PatientProfileSelector } from "@/components/patient-profile-selector";
 import { OfflineIndicator } from "@/components/offline-indicator";
 import { UpdateNotification } from "@/components/update-notification";
+import { PermissionManager } from "@/components/permission-manager";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import NotFound from "@/pages/not-found";
@@ -67,6 +68,7 @@ function AuthenticatedApp() {
             </main>
           </div>
         </div>
+        <PermissionManager />
       </SidebarProvider>
     </PatientProfileProvider>
   );
