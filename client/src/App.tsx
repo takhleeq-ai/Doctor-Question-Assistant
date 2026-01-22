@@ -14,6 +14,7 @@ import { UpdateNotification } from "@/components/update-notification";
 import { PermissionManager } from "@/components/permission-manager";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
+import { useEffect } from "react";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import QuestionsGenerator from "@/pages/questions-generator";
@@ -75,7 +76,37 @@ function AuthenticatedApp() {
 }
 
 function AppContent() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, logoutMutation } = useAuth();
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const handleAutoLogout = () => {
+      logoutMutation.mutate();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        handleAutoLogout();
+      }
+    };
+
+    const handleOnlineStatus = () => {
+      if (!navigator.onLine) {
+        handleAutoLogout();
+      }
+    };
+
+    window.addEventListener("pagehide", handleAutoLogout);
+    window.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("offline", handleOnlineStatus);
+
+    return () => {
+      window.removeEventListener("pagehide", handleAutoLogout);
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("offline", handleOnlineStatus);
+    };
+  }, [isAuthenticated, logoutMutation]);
 
   if (isLoading) {
     return (
