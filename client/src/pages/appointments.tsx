@@ -609,38 +609,44 @@ export default function Appointments() {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : (
-        <div className="space-y-6">
-          {upcomingAppointments && upcomingAppointments.length > 0 && (
-            <div className="space-y-3">
-              <h2 className="text-lg font-semibold">Upcoming</h2>
-              <div className="space-y-3">
-                {upcomingAppointments.map((apt) => (
+          <Tabs defaultValue="upcoming" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+              <TabsTrigger value="past">Past</TabsTrigger>
+            </TabsList>
+            <TabsContent value="upcoming" className="space-y-3">
+              {upcomingAppointments && upcomingAppointments.length > 0 ? (
+                upcomingAppointments.map((apt) => (
                   <AppointmentCard
                     key={apt.id}
                     appointment={apt}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                   />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {pastAppointments && pastAppointments.length > 0 && (
-            <div className="space-y-3">
-              <h2 className="text-lg font-semibold text-muted-foreground">Past Appointments</h2>
-              <div className="space-y-3">
-                {pastAppointments.slice(0, 5).map((apt) => (
+                ))
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  No upcoming appointments
+                </div>
+              )}
+            </TabsContent>
+            <TabsContent value="past" className="space-y-3">
+              {pastAppointments && pastAppointments.length > 0 ? (
+                pastAppointments.map((apt) => (
                   <AppointmentCard
                     key={apt.id}
                     appointment={apt}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                   />
-                ))}
-              </div>
-            </div>
-          )}
+                ))
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  No past appointments
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
 
           {(!appointments || appointments.length === 0) && (
             <Card className="border-dashed">
