@@ -16,6 +16,7 @@ The MVP is fully implemented with all core features functional.
 - **Health Readings**: Track blood pressure, glucose, temperature, weight, heart rate, and oxygen saturation
 - **Timeline View**: Chronological view of all health data
 - **Reminders**: Customizable periodic reminders for logging readings (hourly to weekly intervals)
+- **Nearby Services**: Find pharmacies, GPs, dentists, and A&E/hospitals near you using device location or manual address entry
 - **PWA Support**: Installable web app with offline-capable manifest
 
 ## Tech Stack
@@ -54,6 +55,7 @@ shared/
 - `GET /api/questions` - Retrieve saved question sets
 - `GET/POST /api/providers` - Manage healthcare providers (protected)
 - `PATCH/DELETE /api/providers/:id` - Update/delete providers (protected)
+- `GET /api/nearby` - Find nearby pharmacies, GPs, dentists, hospitals (uses OpenStreetMap)
 
 ## Design
 - Healthcare-themed teal/blue color palette

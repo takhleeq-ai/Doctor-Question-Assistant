@@ -288,31 +288,43 @@ export async function registerRoutes(
       const longitude = parseFloat(lon as string);
       const radius = 10000; // 10km radius
 
-      // Map our service types to OSM amenity/healthcare tags
+      // Map our service types to OSM amenity/healthcare tags (include nodes, ways, and relations)
       let osmQuery = "";
       switch (type) {
         case "pharmacy":
-          osmQuery = `node["amenity"="pharmacy"](around:${radius},${latitude},${longitude});`;
+          osmQuery = `
+            node["amenity"="pharmacy"](around:${radius},${latitude},${longitude});
+            way["amenity"="pharmacy"](around:${radius},${latitude},${longitude});
+          `;
           break;
         case "gp":
           osmQuery = `
             node["amenity"="doctors"](around:${radius},${latitude},${longitude});
+            way["amenity"="doctors"](around:${radius},${latitude},${longitude});
+            node["amenity"="clinic"](around:${radius},${latitude},${longitude});
+            way["amenity"="clinic"](around:${radius},${latitude},${longitude});
             node["healthcare"="doctor"](around:${radius},${latitude},${longitude});
+            way["healthcare"="doctor"](around:${radius},${latitude},${longitude});
             node["healthcare"="clinic"](around:${radius},${latitude},${longitude});
+            way["healthcare"="clinic"](around:${radius},${latitude},${longitude});
           `;
           break;
         case "dentist":
           osmQuery = `
             node["amenity"="dentist"](around:${radius},${latitude},${longitude});
+            way["amenity"="dentist"](around:${radius},${latitude},${longitude});
             node["healthcare"="dentist"](around:${radius},${latitude},${longitude});
+            way["healthcare"="dentist"](around:${radius},${latitude},${longitude});
           `;
           break;
         case "hospital":
           osmQuery = `
             node["amenity"="hospital"](around:${radius},${latitude},${longitude});
             way["amenity"="hospital"](around:${radius},${latitude},${longitude});
+            relation["amenity"="hospital"](around:${radius},${latitude},${longitude});
             node["healthcare"="hospital"](around:${radius},${latitude},${longitude});
-            node["emergency"="yes"](around:${radius},${latitude},${longitude});
+            way["healthcare"="hospital"](around:${radius},${latitude},${longitude});
+            relation["healthcare"="hospital"](around:${radius},${latitude},${longitude});
           `;
           break;
         default:
@@ -342,28 +354,44 @@ export async function registerRoutes(
 
       const data = await response.json();
       
-      // Transform OSM data to our format
+      // Transform OSM data to our format - include elements with or without name
+      const typeLabels: Record<string, string> = {
+        pharmacy: "Pharmacy",
+        gp: "Medical Practice",
+        dentist: "Dental Practice",
+        hospital: "Hospital",
+      };
+      
       const places = data.elements
-        .filter((el: any) => el.tags?.name)
-        .map((el: any) => ({
-          id: el.id.toString(),
-          name: el.tags?.name || "Unknown",
-          type: type,
-          lat: el.lat || el.center?.lat,
-          lon: el.lon || el.center?.lon,
-          address: [
+        .filter((el: any) => el.lat || el.center?.lat) // Must have coordinates
+        .map((el: any) => {
+          // Build a fallback name from address if no name tag
+          const address = [
             el.tags?.["addr:housenumber"],
             el.tags?.["addr:street"],
             el.tags?.["addr:city"],
             el.tags?.["addr:postcode"],
           ]
             .filter(Boolean)
-            .join(", ") || undefined,
-          phone: el.tags?.phone || el.tags?.["contact:phone"] || undefined,
-          openingHours: el.tags?.opening_hours || undefined,
-          website: el.tags?.website || el.tags?.["contact:website"] || undefined,
-        }))
-        .slice(0, 20); // Limit to 20 results
+            .join(", ");
+          
+          const fallbackName = address 
+            ? `${typeLabels[type as string] || "Healthcare"} at ${el.tags?.["addr:street"] || address}`
+            : `${typeLabels[type as string] || "Healthcare Facility"}`;
+
+          return {
+            id: el.id.toString(),
+            name: el.tags?.name || fallbackName,
+            type: type,
+            lat: el.lat || el.center?.lat,
+            lon: el.lon || el.center?.lon,
+            address: address || undefined,
+            phone: el.tags?.phone || el.tags?.["contact:phone"] || undefined,
+            openingHours: el.tags?.opening_hours || undefined,
+            website: el.tags?.website || el.tags?.["contact:website"] || undefined,
+          };
+        })
+        .slice(0, 25); // Limit to 25 results
 
       res.json(places);
     } catch (error) {
