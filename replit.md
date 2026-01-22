@@ -75,6 +75,12 @@ shared/
 - All patient profile and healthcare provider routes are protected with `isAuthenticated` middleware
 
 ## Recent Changes
+- January 22, 2026: Added export/share and child-friendly UI features
+  - Export & Share page to download health data as text file or email via SendGrid
+  - Child-friendly colorful purple/pink theme when selected patient is under 15 years old
+  - UI adapts with kid-friendly language (e.g., "Doctor Visits" instead of "Appointments")
+  - Email sharing requires SendGrid integration setup (SENDGRID_API_KEY secret)
+
 - January 22, 2026: Added patient profiles feature
   - Multiple patient profiles per user account (self, children, spouse, parents, etc.)
   - Profile management UI in the profile page with tabs
