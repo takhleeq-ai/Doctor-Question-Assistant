@@ -431,7 +431,7 @@ export async function registerRoutes(
       }
 
       // Validate service type (whitelist allowed values)
-      const allowedTypes = ["pharmacy", "gp", "dentist", "hospital"];
+      const allowedTypes = ["pharmacy", "gp", "dentist", "optician", "hospital"];
       if (!allowedTypes.includes(type as string)) {
         return res.status(400).json({ error: "Invalid service type" });
       }
@@ -477,6 +477,14 @@ export async function registerRoutes(
             way["healthcare"="dentist"](around:${radius},${latitude},${longitude});
           `;
           break;
+        case "optician":
+          osmQuery = `
+            node["shop"="optician"](around:${radius},${latitude},${longitude});
+            way["shop"="optician"](around:${radius},${latitude},${longitude});
+            node["healthcare"="optometrist"](around:${radius},${latitude},${longitude});
+            way["healthcare"="optometrist"](around:${radius},${latitude},${longitude});
+          `;
+          break;
         case "hospital":
           osmQuery = `
             node["amenity"="hospital"](around:${radius},${latitude},${longitude});
@@ -519,6 +527,7 @@ export async function registerRoutes(
         pharmacy: "Pharmacy",
         gp: "Medical Practice",
         dentist: "Dental Practice",
+        optician: "Optician",
         hospital: "Hospital",
       };
       

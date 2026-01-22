@@ -1,13 +1,12 @@
 import { useLocation, Link } from "wouter";
 import {
-  Stethoscope,
+  HeartPulse,
   ClipboardList,
   Activity,
   Thermometer,
   Calendar,
   Bell,
   Clock,
-  Heart,
   User,
   LogIn,
   Loader2,
@@ -94,7 +93,7 @@ export function AppSidebar() {
       <SidebarHeader className="p-4">
         <Link href="/" className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary">
-            <Stethoscope className="h-5 w-5 text-primary-foreground" />
+            <HeartPulse className="h-5 w-5 text-primary-foreground" />
           </div>
           <div className="flex flex-col">
             <span className="text-base font-semibold">HealthPrep</span>
@@ -129,7 +128,7 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4 space-y-3">
         <div className="flex items-center gap-2 rounded-md bg-accent/50 p-3">
-          <Heart className="h-4 w-4 text-destructive shrink-0" />
+          <HeartPulse className="h-4 w-4 text-destructive shrink-0" />
           <p className="text-xs text-muted-foreground">
             For informational purposes only. Not medical advice.
           </p>

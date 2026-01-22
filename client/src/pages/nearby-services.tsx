@@ -12,6 +12,7 @@ import {
   Stethoscope,
   Hospital,
   RefreshCw,
+  Eye,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,7 @@ const SERVICE_TYPES = [
   { key: "pharmacy", label: "Pharmacy", icon: Pill },
   { key: "gp", label: "GP / Doctor", icon: Stethoscope },
   { key: "dentist", label: "Dentist", icon: Building2 },
+  { key: "optician", label: "Optician", icon: Eye },
   { key: "hospital", label: "A&E / Hospital", icon: Hospital },
 ];
 
