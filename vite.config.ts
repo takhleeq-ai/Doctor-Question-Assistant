@@ -3,7 +3,11 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
+const githubPagesBase = process.env.GITHUB_PAGES_BASE;
+const isGithubPages = process.env.GITHUB_PAGES === "true";
+
 export default defineConfig({
+  base: githubPagesBase ?? "/",
   plugins: [
     react(),
     runtimeErrorOverlay(),
@@ -28,7 +32,10 @@ export default defineConfig({
   },
   root: path.resolve(import.meta.dirname, "client"),
   build: {
-    outDir: path.resolve(import.meta.dirname, "dist/public"),
+    outDir: path.resolve(
+      import.meta.dirname,
+      isGithubPages ? "dist" : "dist/public",
+    ),
     emptyOutDir: true,
   },
   server: {
