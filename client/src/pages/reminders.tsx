@@ -151,7 +151,7 @@ function ReminderCard({
 
           <div className="flex items-center gap-2 shrink-0">
             <Switch
-              checked={reminder.isActive}
+              checked={reminder.isActive ?? false}
               onCheckedChange={(checked) => onToggle(reminder.id, checked)}
               data-testid={`switch-reminder-${reminder.id}`}
             />

@@ -65,3 +65,16 @@ Preferred communication style: Simple, everyday language.
 - `AI_INTEGRATIONS_OPENAI_BASE_URL` - OpenAI base URL
 - `ISSUER_URL` - OIDC issuer (defaults to Replit)
 - `REPL_ID` - Replit environment identifier
+
+## GitHub Pages Deployment (Static Client)
+
+This app includes a full Express backend, but GitHub Pages can only host static files. Use the client-only build when publishing to GitHub Pages.
+
+1. Decide your GitHub Pages base path:
+   - User/organization site: `/`
+   - Project site: `/<repo-name>/`
+2. Build the static client with the base path:
+   ```bash
+   GITHUB_PAGES_BASE="/<repo-name>/" npm run build:pages
+   ```
+3. Deploy the generated `dist/` folder to GitHub Pages (e.g., `gh-pages` branch or `/docs` depending on your repo settings).
