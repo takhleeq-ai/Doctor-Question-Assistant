@@ -361,7 +361,6 @@ function AppointmentForm({
                         field.onChange(newDate);
                       }
                     }}
-                    disabled={(date) => date < new Date()}
                     initialFocus
                   />
                   <Separator />
@@ -510,10 +509,17 @@ export default function Appointments() {
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return apiRequest("POST", "/api/appointments", {
-        ...data,
+      const payload = {
+        title: data.title,
+        doctorName: data.doctorName || null,
+        specialty: data.specialty || null,
         appointmentDate: data.appointmentDate.toISOString(),
-      });
+        location: data.location || null,
+        notes: data.notes || null,
+        reminderEnabled: data.reminderEnabled,
+        reminderDaysBefore: data.reminderDaysBefore,
+      };
+      return apiRequest("POST", "/api/appointments", payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
@@ -523,10 +529,17 @@ export default function Appointments() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: FormData }) => {
-      return apiRequest("PATCH", `/api/appointments/${id}`, {
-        ...data,
+      const payload = {
+        title: data.title,
+        doctorName: data.doctorName || null,
+        specialty: data.specialty || null,
         appointmentDate: data.appointmentDate.toISOString(),
-      });
+        location: data.location || null,
+        notes: data.notes || null,
+        reminderEnabled: data.reminderEnabled,
+        reminderDaysBefore: data.reminderDaysBefore,
+      };
+      return apiRequest("PATCH", `/api/appointments/${id}`, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
