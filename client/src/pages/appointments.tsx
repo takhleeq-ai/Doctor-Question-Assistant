@@ -509,43 +509,36 @@ export default function Appointments() {
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      console.log("Creating appointment with data:", data);
       const payload = {
         title: data.title,
         doctorName: data.doctorName || null,
         specialty: data.specialty || null,
-        appointmentDate: data.appointmentDate.toISOString(),
+        appointmentDate: data.appointmentDate,
         location: data.location || null,
         notes: data.notes || null,
         reminderEnabled: !!data.reminderEnabled,
         reminderDaysBefore: data.reminderDaysBefore || 1,
       };
-      console.log("Sending payload:", payload);
       return apiRequest("POST", "/api/appointments", payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       setDialogOpen(false);
     },
-    onError: (error) => {
-      console.error("Appointment creation error:", error);
-    }
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: FormData }) => {
-      console.log("Updating appointment with data:", data);
       const payload = {
         title: data.title,
         doctorName: data.doctorName || null,
         specialty: data.specialty || null,
-        appointmentDate: data.appointmentDate.toISOString(),
+        appointmentDate: data.appointmentDate,
         location: data.location || null,
         notes: data.notes || null,
         reminderEnabled: !!data.reminderEnabled,
         reminderDaysBefore: data.reminderDaysBefore || 1,
       };
-      console.log("Sending payload:", payload);
       return apiRequest("PATCH", `/api/appointments/${id}`, payload);
     },
     onSuccess: () => {
@@ -553,9 +546,6 @@ export default function Appointments() {
       setDialogOpen(false);
       setEditingAppointment(null);
     },
-    onError: (error) => {
-      console.error("Appointment update error:", error);
-    }
   });
 
   const deleteMutation = useMutation({

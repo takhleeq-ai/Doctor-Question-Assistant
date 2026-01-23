@@ -95,6 +95,8 @@ export const appointmentsRelations = relations(appointments, ({ many }) => ({
 export const insertAppointmentSchema = createInsertSchema(appointments).omit({
   id: true,
   createdAt: true,
+}).extend({
+  appointmentDate: z.string().or(z.date()).transform((val) => new Date(val)),
 });
 
 export type Appointment = typeof appointments.$inferSelect;
