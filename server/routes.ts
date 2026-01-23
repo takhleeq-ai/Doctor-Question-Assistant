@@ -262,17 +262,22 @@ export async function registerRoutes(
 
   app.post("/api/appointments", isAuthenticated, async (req: any, res) => {
     try {
+      console.log("POST /api/appointments body:", req.body);
       const data = insertAppointmentSchema.parse(req.body);
       const appointment = await storage.createAppointment(data);
       res.status(201).json(appointment);
     } catch (error) {
       console.error("Error creating appointment:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Validation error", details: error.errors });
+      }
       res.status(400).json({ error: "Invalid appointment data" });
     }
   });
 
   app.patch("/api/appointments/:id", isAuthenticated, validateIdParam, async (req: any, res) => {
     try {
+      console.log("PATCH /api/appointments/:id body:", req.body);
       const id = req.validatedId;
       const data = insertAppointmentSchema.partial().parse(req.body);
       const appointment = await storage.updateAppointment(id, data);
@@ -282,6 +287,9 @@ export async function registerRoutes(
       res.json(appointment);
     } catch (error) {
       console.error("Error updating appointment:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Validation error", details: error.errors });
+      }
       res.status(400).json({ error: "Invalid appointment data" });
     }
   });
