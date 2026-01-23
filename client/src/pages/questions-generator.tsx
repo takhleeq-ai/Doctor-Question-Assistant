@@ -12,6 +12,8 @@ import {
   ChevronRight,
   Loader2,
   Calendar,
+  History,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,7 +39,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { MedicalDisclaimer } from "@/components/medical-disclaimer";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { format } from "date-fns";
 import type { Appointment } from "@shared/schema";
 
 const formSchema = z.object({
@@ -75,6 +78,10 @@ export default function QuestionsGenerator() {
     },
   });
 
+  const { data: questionHistory, isLoading: isLoadingHistory } = useQuery<any[]>({
+    queryKey: ["/api/questions"],
+  });
+
   const generateMutation = useMutation({
     mutationFn: async (data: FormData) => {
       const sanitizedData = {
@@ -96,6 +103,7 @@ export default function QuestionsGenerator() {
     },
     onSuccess: (data) => {
       setGeneratedData(data);
+      queryClient.invalidateQueries({ queryKey: ["/api/questions"] });
     },
   });
 
@@ -417,6 +425,59 @@ export default function QuestionsGenerator() {
                   Fill in the form with your health information and click "Generate Questions" 
                   to get personalized questions for your doctor visit.
                 </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {questionHistory && questionHistory.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <History className="h-5 w-5 text-primary" />
+                  Past Questions
+                </CardTitle>
+                <CardDescription>
+                  Access questions you've previously generated
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {questionHistory.map((historyItem) => (
+                  <div 
+                    key={historyItem.id} 
+                    className="flex flex-col p-3 rounded-md border hover:bg-accent/50 cursor-pointer transition-colors"
+                    onClick={() => {
+                      try {
+                        const questions = typeof historyItem.generatedQuestions === 'string' 
+                          ? JSON.parse(historyItem.generatedQuestions) 
+                          : historyItem.generatedQuestions;
+                        const redFlags = historyItem.redFlags 
+                          ? (typeof historyItem.redFlags === 'string' ? JSON.parse(historyItem.redFlags) : historyItem.redFlags) 
+                          : [];
+                        
+                        setGeneratedData({ questions, redFlags });
+                        form.reset({
+                          condition: historyItem.condition,
+                          symptoms: historyItem.symptoms,
+                          medications: historyItem.medications || "",
+                          appointmentId: historyItem.appointmentId?.toString() || "",
+                        });
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      } catch (e) {
+                        console.error("Error parsing history item:", e);
+                      }
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{historyItem.condition}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(historyItem.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                        </p>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mt-1" />
+                    </div>
+                  </div>
+                ))}
               </CardContent>
             </Card>
           )}
