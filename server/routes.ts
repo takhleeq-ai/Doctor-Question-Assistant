@@ -4,12 +4,13 @@ import { storage } from "./storage";
 import OpenAI from "openai";
 import { z } from "zod";
 import validator from "validator";
-import { 
+import {
   insertAppointmentSchema,
   insertSymptomSchema,
   insertReadingSchema,
   insertReminderSchema,
   insertHealthcareProviderSchema,
+  insertTodoSchema,
 } from "@shared/schema";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 
@@ -650,6 +651,61 @@ Generate comprehensive but focused questions I should ask my doctor, organized b
         }
       }
       res.status(500).json({ error: "Failed to generate questions", details: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  // Todos (protected routes, scoped to authenticated user)
+  app.get("/api/todos", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const items = await storage.getTodos(userId);
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching todos:", error);
+      res.status(500).json({ error: "Failed to fetch todos" });
+    }
+  });
+
+  app.post("/api/todos", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const data = insertTodoSchema.parse({ ...req.body, userId });
+      const todo = await storage.createTodo(data);
+      res.status(201).json(todo);
+    } catch (error) {
+      console.error("Error creating todo:", error);
+      res.status(400).json({ error: "Invalid todo data" });
+    }
+  });
+
+  app.patch("/api/todos/:id", isAuthenticated, validateIdParam, async (req: any, res) => {
+    try {
+      const id = req.validatedId;
+      const userId = req.user.claims.sub;
+      const data = insertTodoSchema.partial().parse(req.body);
+      const todo = await storage.updateTodo(id, userId, data);
+      if (!todo) {
+        return res.status(404).json({ error: "Todo not found" });
+      }
+      res.json(todo);
+    } catch (error) {
+      console.error("Error updating todo:", error);
+      res.status(400).json({ error: "Invalid todo data" });
+    }
+  });
+
+  app.delete("/api/todos/:id", isAuthenticated, validateIdParam, async (req: any, res) => {
+    try {
+      const id = req.validatedId;
+      const userId = req.user.claims.sub;
+      const deleted = await storage.deleteTodo(id, userId);
+      if (!deleted) {
+        return res.status(404).json({ error: "Todo not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting todo:", error);
+      res.status(500).json({ error: "Failed to delete todo" });
     }
   });
 

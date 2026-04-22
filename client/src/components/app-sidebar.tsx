@@ -12,6 +12,7 @@ import {
   Loader2,
   MapPin,
   Share2,
+  CheckSquare,
 } from "lucide-react";
 import {
   Sidebar,
@@ -65,6 +66,12 @@ const mainNavItems = [
     url: "/reminders",
     icon: Bell,
     description: "Set up reading reminders",
+  },
+  {
+    title: "To-Do List",
+    url: "/todos",
+    icon: CheckSquare,
+    description: "Track health-related tasks",
   },
   {
     title: "Nearby Services",

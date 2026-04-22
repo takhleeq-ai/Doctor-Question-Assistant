@@ -1,4 +1,4 @@
-import { 
+import {
   appointments, type Appointment, type InsertAppointment,
   questionSets, type QuestionSet, type InsertQuestionSet,
   symptoms, type Symptom, type InsertSymptom,
@@ -6,6 +6,7 @@ import {
   reminders, type Reminder, type InsertReminder,
   healthcareProviders, type HealthcareProvider, type InsertHealthcareProvider,
   patientProfiles, type PatientProfile, type InsertPatientProfile,
+  todos, type Todo, type InsertTodo,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
@@ -55,6 +56,13 @@ export interface IStorage {
   createReminder(data: InsertReminder): Promise<Reminder>;
   updateReminder(id: number, data: Partial<InsertReminder>): Promise<Reminder | undefined>;
   deleteReminder(id: number): Promise<void>;
+
+  // Todos
+  getTodos(userId: string): Promise<Todo[]>;
+  getTodo(id: number, userId: string): Promise<Todo | undefined>;
+  createTodo(data: InsertTodo): Promise<Todo>;
+  updateTodo(id: number, userId: string, data: Partial<InsertTodo>): Promise<Todo | undefined>;
+  deleteTodo(id: number, userId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -235,6 +243,39 @@ export class DatabaseStorage implements IStorage {
   
   async deleteReminder(id: number): Promise<void> {
     await db.delete(reminders).where(eq(reminders.id, id));
+  }
+
+  // Todos
+  async getTodos(userId: string): Promise<Todo[]> {
+    return db.select().from(todos)
+      .where(eq(todos.userId, userId))
+      .orderBy(todos.completed, desc(todos.createdAt));
+  }
+
+  async getTodo(id: number, userId: string): Promise<Todo | undefined> {
+    const [todo] = await db.select().from(todos)
+      .where(and(eq(todos.id, id), eq(todos.userId, userId)));
+    return todo || undefined;
+  }
+
+  async createTodo(data: InsertTodo): Promise<Todo> {
+    const [todo] = await db.insert(todos).values(data).returning();
+    return todo;
+  }
+
+  async updateTodo(id: number, userId: string, data: Partial<InsertTodo>): Promise<Todo | undefined> {
+    const [todo] = await db.update(todos)
+      .set(data)
+      .where(and(eq(todos.id, id), eq(todos.userId, userId)))
+      .returning();
+    return todo || undefined;
+  }
+
+  async deleteTodo(id: number, userId: string): Promise<boolean> {
+    const result = await db.delete(todos)
+      .where(and(eq(todos.id, id), eq(todos.userId, userId)))
+      .returning();
+    return result.length > 0;
   }
 }
 

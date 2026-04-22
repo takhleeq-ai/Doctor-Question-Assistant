@@ -203,5 +203,38 @@ export const insertReminderSchema = createInsertSchema(reminders).omit({
 export type Reminder = typeof reminders.$inferSelect;
 export type InsertReminder = z.infer<typeof insertReminderSchema>;
 
+// To-Do list table
+export const todos = pgTable("todos", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  completed: boolean("completed").default(false),
+  priority: text("priority").default("medium"), // "low" | "medium" | "high"
+  dueDate: timestamp("due_date"),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const todosRelations = relations(todos, ({ one }) => ({
+  user: one(users, {
+    fields: [todos.userId],
+    references: [users.id],
+  }),
+}));
+
+export const insertTodoSchema = createInsertSchema(todos).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  dueDate: z.string().datetime().optional().nullable().transform(val => {
+    if (!val) return null;
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? null : d;
+  }),
+});
+
+export type Todo = typeof todos.$inferSelect;
+export type InsertTodo = z.infer<typeof insertTodoSchema>;
+
 // Re-export chat models for OpenAI integration
 export * from "./models/chat";

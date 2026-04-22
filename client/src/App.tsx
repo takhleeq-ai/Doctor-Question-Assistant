@@ -26,6 +26,7 @@ import Reminders from "@/pages/reminders";
 import Profile from "@/pages/profile";
 import NearbyServices from "@/pages/nearby-services";
 import ExportData from "@/pages/export-data";
+import Todos from "@/pages/todos";
 
 function Router() {
   return (
@@ -37,6 +38,7 @@ function Router() {
       <Route path="/timeline" component={Timeline} />
       <Route path="/reminders" component={Reminders} />
       <Route path="/nearby" component={NearbyServices} />
+      <Route path="/todos" component={Todos} />
       <Route path="/export" component={ExportData} />
       <Route path="/profile" component={Profile} />
       <Route component={NotFound} />
